@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { getTodayQuestion, mockAnswers } from "../data/questionData";
 import type { Answer } from "../data/questionData";
 import { useAuth } from "../context/AuthContext";
@@ -7,7 +6,6 @@ import { useAuth } from "../context/AuthContext";
 type Screen = "question" | "feed";
 
 export default function QuestionPage() {
-  const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const question = getTodayQuestion();
   const [screen, setScreen] = useState<Screen>("question");
