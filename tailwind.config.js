@@ -11,11 +11,11 @@ export default {
         ember: "#8B3A2A",
         slate: "#3D4B5C",
       },
-      fontFamily: {
-        serif: ["Georgia", "Cambria", "serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
-      },
-    },
-  },
+     fontFamily: {
+  serif: ["Playfair Display", "Georgia", "serif"],
+  lora: ["Lora", "Georgia", "serif"],
+  sans: ["DM Sans", "Inter", "system-ui", "sans-serif"],
+  hebrew: ["Frank Ruhl Libre", "serif"],
+},
   plugins: [],
-};
+    }}};
