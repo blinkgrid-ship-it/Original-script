@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { pathways, communities } from "../component/data/onboardingData";
+import { pathways, communities } from "../data/onboardingData";
 import { useAuth } from "../context/AuthContext";
 
 type Step = 1 | 2 | 3 | 4;

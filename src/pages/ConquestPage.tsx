@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getChapterWords, type ConquestWord } from "../component/data/conquestData";
+import { getChapterWords, type ConquestWord } from "../data/conquestData";
 
 type Screen = "map" | "study" | "complete";
 

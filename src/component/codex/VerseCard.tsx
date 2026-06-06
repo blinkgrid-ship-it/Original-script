@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { Verse } from "../data/codexData";
+import type { Verse } from "../../data/codexData";
 import HebrewWordTooltip from "./HebrewWordTooltip";
 
 interface Props {
