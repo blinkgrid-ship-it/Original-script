@@ -13,7 +13,6 @@ export default function CodexPage() {
   const [activeWord, setActiveWord] = useState<string | null>(null);
   const [openExplanations, setOpenExplanations] = useState<Set<number>>(new Set());
   const [completed, setCompleted] = useState<Set<number>>(new Set());
-  const [hasRead, setHasRead] = useState(false);
 
   const chapter = genesis[currentChapter];
 
@@ -27,7 +26,6 @@ export default function CodexPage() {
 
   function markComplete() {
     setCompleted((prev) => new Set([...prev, currentChapter]));
-    setHasRead(false);
   }
 
   // Gate chapter 2+ behind auth
@@ -61,29 +59,7 @@ export default function CodexPage() {
 
   return (
     <div className="min-h-screen bg-ink">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-ink/90 backdrop-blur border-b border-gold/10 px-4 py-3 flex items-center justify-between">
-        <button
-          onClick={() => navigate("/question")}
-          className="text-parchment/50 hover:text-parchment text-sm transition-colors"
-        >
-          ← Back
-        </button>
-        <div className="text-center">
-          <p className="text-gold font-serif font-bold">The Codex</p>
-          <p className="text-parchment/40 text-xs">
-            Genesis · Chapter {chapter.number}
-          </p>
-        </div>
-        <button
-          onClick={() => navigate("/profile")}
-          className="w-8 h-8 rounded-full bg-slate/50 flex items-center justify-center text-xs font-bold text-gold"
-        >
-          {user?.email?.charAt(0).toUpperCase() ?? "?"}
-        </button>
-      </div>
-
-      <div className="max-w-3xl mx-auto px-4 pt-20 pb-16">
+      <div className="max-w-3xl mx-auto px-4 pt-6 pb-8">
         {/* Chapter tabs */}
         <div className="flex gap-2 overflow-x-auto py-3 mb-6">
           {genesis.map((ch, i) => {
@@ -122,14 +98,21 @@ export default function CodexPage() {
                   : "text-parchment/40 hover:text-parchment"
               }`}
             >
-              {lang === "english" ? "English" : lang === "malayalam" ? "Malayalam" : "עברית"}
+              {lang === "english"
+                ? "English"
+                : lang === "malayalam"
+                ? "Malayalam"
+                : "עברית"}
             </button>
           ))}
         </div>
 
         {/* Verses */}
         {chapter.verses.map((verse) => (
-          <div key={verse.number} className="mb-8 border border-parchment/10 rounded-xl overflow-hidden">
+          <div
+            key={verse.number}
+            className="mb-8 border border-parchment/10 rounded-xl overflow-hidden"
+          >
             {/* Verse number */}
             <div className="px-5 py-3 bg-slate/20 border-b border-parchment/10">
               <span className="text-gold font-serif text-sm font-bold">
@@ -154,7 +137,10 @@ export default function CodexPage() {
                   <p
                     dir="rtl"
                     className="text-parchment leading-loose text-xl mb-4"
-                    style={{ fontFamily: "'Frank Ruhl Libre', serif", letterSpacing: "0.05em" }}
+                    style={{
+                      fontFamily: "'Frank Ruhl Libre', serif",
+                      letterSpacing: "0.05em",
+                    }}
                   >
                     {verse.hebrew}
                   </p>
@@ -162,7 +148,9 @@ export default function CodexPage() {
                     {verse.hebrewWords.map((w, i) => (
                       <button
                         key={i}
-                        onClick={() => setActiveWord(activeWord === w.word ? null : w.word)}
+                        onClick={() =>
+                          setActiveWord(activeWord === w.word ? null : w.word)
+                        }
                         dir="rtl"
                         className={`px-2 py-1 rounded text-lg transition-all ${
                           activeWord === w.word
@@ -191,7 +179,9 @@ export default function CodexPage() {
                                 <p
                                   dir="rtl"
                                   className="text-gold text-4xl font-serif"
-                                  style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                                  style={{
+                                    fontFamily: "'Frank Ruhl Libre', serif",
+                                  }}
                                 >
                                   {w.word}
                                 </p>
@@ -217,7 +207,9 @@ export default function CodexPage() {
                               </div>
                               <div className="flex gap-3">
                                 <span className="text-parchment/30 w-20 shrink-0">Usage</span>
-                                <span className="text-parchment/70 leading-relaxed">{w.usage}</span>
+                                <span className="text-parchment/70 leading-relaxed">
+                                  {w.usage}
+                                </span>
                               </div>
                             </div>
                           </div>

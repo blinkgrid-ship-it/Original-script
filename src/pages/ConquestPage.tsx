@@ -57,7 +57,7 @@ export default function ConquestPage() {
 
   if (screen === "complete") {
     return (
-      <div className="min-h-screen bg-ink flex items-center justify-center px-6 pb-24">
+      <div className="min-h-screen bg-ink flex items-center justify-center px-6 pb-8">
         <div className="text-center max-w-md">
           <p className="text-6xl mb-6">🏆</p>
           <h1 className="text-3xl font-serif text-gold mb-4">{completion.title}</h1>
@@ -76,7 +76,7 @@ export default function ConquestPage() {
 
   if (screen === "study" && activeWord) {
     return (
-      <div className="min-h-screen bg-ink px-4 py-8 pb-24 max-w-xl mx-auto">
+      <div className="min-h-screen bg-ink px-4 py-8 pb-8 max-w-xl mx-auto">
         <button
           onClick={() => setScreen("map")}
           className="text-parchment/40 hover:text-parchment text-sm mb-8 block"
@@ -147,7 +147,7 @@ export default function ConquestPage() {
 
   // Map screen
   return (
-    <div className="min-h-screen bg-ink px-4 py-8 pb-24 max-w-2xl mx-auto">
+    <div className="min-h-screen bg-ink px-4 py-8 pb-8 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => navigate("/codex")}

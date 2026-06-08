@@ -1,226 +1,119 @@
 import { useState } from "react";
-import { getTodayQuestion, mockAnswers } from "../data/questionData";
-import type { Answer } from "../data/questionData";
 import { useAuth } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { getTodayQuestion, mockAnswers } from "../data/questionData";
+import AuthModal from "../component/AuthModal";
 type Screen = "question" | "feed";
 
+const pathwayColors: Record<string, string> = {
+  "Wisdom Seeker": "text-amber-400 bg-amber-400/10 border-amber-400/20",
+  "Serious Learner": "text-blue-400 bg-blue-400/10 border-blue-400/20",
+  "Theology Student": "text-purple-400 bg-purple-400/10 border-purple-400/20",
+  "Church Leader": "text-emerald-400 bg-emerald-400/10 border-emerald-400/20",
+};
+
 export default function QuestionPage() {
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
-  const question = getTodayQuestion();
+  const { user } = useAuth();
   const [screen, setScreen] = useState<Screen>("question");
+  const [scriptureOpen, setScriptureOpen] = useState(false);
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [passageOpen, setPassageOpen] = useState(false);
-  const [answers, setAnswers] = useState<Answer[]>(mockAnswers);
+  const [showAuth, setShowAuth] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [repliedTo, setRepliedTo] = useState<Set<string>>(new Set());
 
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  const question = getTodayQuestion();
+
+  function handleSubmit() {
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
     if (!answer.trim()) return;
-    const newAnswer: Answer = {
-      id: `a-${Date.now()}`,
-      questionId: question.id,
-      userId: user?.id ?? "guest",
-      userName: user?.email?.split("@")[0] ?? "You",
-      pathway: "Wisdom Seeker",
-      answer: answer.trim(),
-      timeAgo: "Just now",
-      replies: [],
-    };
-    setAnswers([newAnswer, ...answers]);
     setSubmitted(true);
     setScreen("feed");
   }
 
   function handleReply(answerId: string) {
-    if (!replyText.trim()) return;
-    setAnswers((prev) =>
-      prev.map((a) =>
-        a.id === answerId
-          ? {
-              ...a,
-              replies: [
-                ...a.replies,
-                {
-                  id: `r-${Date.now()}`,
-                  userId: user?.id ?? "guest",
-                  userName: user?.email?.split("@")[0] ?? "You",
-                  text: replyText.trim(),
-                  timeAgo: "Just now",
-                },
-              ],
-            }
-          : a
-      )
-    );
-    setRepliedTo((prev) => new Set([...prev, answerId]));
-    setReplyingTo(null);
-    setReplyText("");
+    if (!user) {
+      setShowAuth(true);
+      return;
+    }
+    setReplyingTo(replyingTo === answerId ? null : answerId);
   }
 
-  const pathwayColors: Record<string, string> = {
-    "Wisdom Seeker": "bg-blue-900/40 text-blue-300",
-    "Serious Learner": "bg-amber-900/40 text-amber-300",
-    "Theology Student": "bg-purple-900/40 text-purple-300",
-    "Church Leader": "bg-green-900/40 text-green-300",
-  };
-
-  return (
-    <div className="min-h-screen bg-ink">
-      {/* Header */}
-      <div className="fixed top-0 left-0 right-0 z-40 bg-ink/90 backdrop-blur border-b border-gold/10 px-6 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-gold font-serif font-bold text-lg">Original Script</p>
-          <p className="text-parchment/30 text-xs">
-            {new Date().toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" })}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {screen === "feed" && !submitted && (
-            <button
-              onClick={() => setScreen("question")}
-              className="text-gold text-xs hover:underline"
-            >
-              Answer today's question
-            </button>
-          )}
-          {user && (
-            <button
-              onClick={signOut}
-              className="text-parchment/30 hover:text-parchment text-xs transition-colors"
-            >
-              Sign out
-            </button>
-          )}
+  if (screen === "feed") {
+    return (
+      <div className="min-h-screen bg-ink pb-8">
+        <div className="max-w-2xl mx-auto px-4 pt-6">
+          {/* Back + question recap */}
           <button
-  onClick={() => navigate("/profile")}
-  className="w-8 h-8 rounded-full bg-slate/50 flex items-center justify-center text-xs font-bold text-gold hover:bg-slate/70 transition-all"
->
-  {user?.email?.charAt(0).toUpperCase() ?? "?"}
-</button>
-        </div>
-      </div>
+            onClick={() => setScreen("question")}
+            className="text-parchment/40 hover:text-parchment text-sm mb-5 block"
+          >
+            ← Back to question
+          </button>
 
-      {/* Question Screen */}
-      {screen === "question" && (
-        <div className="min-h-screen flex flex-col items-center justify-center px-6 pt-20 pb-10">
-          <div className="max-w-xl w-full">
-            {/* Question */}
-            <p className="text-gold/60 text-xs uppercase tracking-widest mb-6 text-center">
-              Question of the Day
+          <div className="border border-gold/10 rounded-xl p-4 mb-6 bg-gold/5">
+            <p className="text-gold/60 text-xs uppercase tracking-widest mb-1">
+              Today's Question
             </p>
-            <h1 className="font-serif text-2xl md:text-3xl text-parchment leading-relaxed text-center mb-6">
+            <p className="text-parchment/70 text-sm font-serif leading-relaxed">
               {question.text}
-            </h1>
-
-            {/* Scripture */}
-            <div className="mb-8">
-              <button
-                onClick={() => setPassageOpen(!passageOpen)}
-                className="w-full flex items-center justify-between px-4 py-3 border border-parchment/10 rounded-lg hover:border-gold/20 transition-all"
-              >
-                <span className="text-gold/70 font-serif italic text-sm">
-                  {question.scripture.reference}
-                </span>
-                <span className="text-parchment/30 text-xs">
-                  {passageOpen ? "Hide passage" : "Show passage"}
-                </span>
-              </button>
-              {passageOpen && (
-                <div className="mt-2 px-4 py-4 border border-parchment/10 rounded-lg bg-slate/10">
-                  <p className="text-parchment/60 font-serif italic text-sm leading-relaxed">
-                    "{question.scripture.passage}"
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Answer input */}
-            <form onSubmit={handleSubmit}>
-              <textarea
-                value={answer}
-                onChange={(e) => setAnswer(e.target.value)}
-                placeholder="What do you think?"
-                rows={5}
-                className="w-full px-4 py-4 bg-parchment/5 border border-parchment/20 rounded-xl text-parchment placeholder-parchment/30 focus:outline-none focus:border-gold font-sans text-sm resize-none mb-4"
-              />
-              <button
-                type="submit"
-                disabled={!answer.trim()}
-                className="w-full py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide disabled:opacity-30 disabled:cursor-not-allowed"
-              >
-                Share with Community
-              </button>
-            </form>
-
-            <button
-              onClick={() => setScreen("feed")}
-              className="w-full mt-3 text-parchment/30 text-xs hover:text-parchment transition-colors text-center"
-            >
-              See what others said first →
-            </button>
+            </p>
+            {submitted && answer.trim() && (
+              <div className="mt-3 pt-3 border-t border-parchment/10">
+                <p className="text-parchment/40 text-xs mb-1">Your reflection</p>
+                <p className="text-parchment/60 text-sm italic">"{answer}"</p>
+              </div>
+            )}
           </div>
-        </div>
-      )}
 
-      {/* Community Feed Screen */}
-      {screen === "feed" && (
-        <div className="max-w-xl mx-auto px-4 pt-24 pb-16">
-          {submitted && (
-            <div className="mb-6 p-4 border border-gold/30 rounded-xl bg-gold/5 text-center">
-              <p className="text-gold font-serif">Your answer has been shared.</p>
-              <p className="text-parchment/40 text-xs mt-1">
-                Come back tomorrow for a new question.
-              </p>
-            </div>
-          )}
-
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-parchment font-serif text-xl">
-              Community Answers
-            </h2>
-            <span className="text-parchment/30 text-xs">
-              {answers.length} people answered today
-            </span>
-          </div>
+          <p className="text-parchment/30 text-xs uppercase tracking-widest mb-4">
+            Community · {mockAnswers.length} reflections
+          </p>
 
           <div className="space-y-4">
-            {answers.map((a) => (
-              <div
-                key={a.id}
-                className="border border-parchment/10 rounded-xl p-5 hover:border-parchment/20 transition-all"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-slate/50 flex items-center justify-center text-xs font-bold text-gold shrink-0">
-                    {a.userName.charAt(0).toUpperCase()}
+            {mockAnswers.map((ans) => (
+              <div key={ans.id} className="border border-parchment/10 rounded-xl p-5">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-slate/40 flex items-center justify-center text-xs text-gold font-bold shrink-0">
+                      {ans.userName.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-parchment text-sm font-medium">
+                        {ans.userName}
+                      </p>
+                      <p className="text-parchment/30 text-xs">{ans.timeAgo}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-parchment text-sm font-medium">{a.userName}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${pathwayColors[a.pathway] ?? "bg-slate/30 text-parchment/50"}`}>
-                      {a.pathway}
-                    </span>
-                  </div>
-                  <span className="ml-auto text-parchment/20 text-xs">{a.timeAgo}</span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded border ${
+                      pathwayColors[ans.pathway] ??
+                      "text-parchment/30 bg-parchment/5 border-parchment/10"
+                    }`}
+                  >
+                    {ans.pathway}
+                  </span>
                 </div>
 
-                <p className="text-parchment/70 text-sm leading-relaxed mb-4">
-                  {a.answer}
+                <p className="text-parchment/70 text-sm leading-relaxed mb-3">
+                  {ans.answer}
                 </p>
 
                 {/* Replies */}
-                {a.replies.length > 0 && (
-                  <div className="ml-4 border-l border-parchment/10 pl-4 mb-3 space-y-2">
-                    {a.replies.map((r) => (
-                      <div key={r.id}>
-                        <p className="text-parchment/50 text-xs font-medium mb-0.5">
-                          {r.userName}
+                {ans.replies.length > 0 && (
+                  <div className="ml-4 border-l border-parchment/10 pl-4 space-y-2 mb-3">
+                    {ans.replies.map((reply) => (
+                      <div key={reply.id}>
+                        <p className="text-parchment/50 text-xs font-medium">
+                          {reply.userName}
                         </p>
-                        <p className="text-parchment/50 text-xs leading-relaxed">
-                          {r.text}
+                        <p className="text-parchment/40 text-xs leading-relaxed">
+                          {reply.text}
+                        </p>
+                        <p className="text-parchment/20 text-xs mt-0.5">
+                          {reply.timeAgo}
                         </p>
                       </div>
                     ))}
@@ -228,47 +121,137 @@ export default function QuestionPage() {
                 )}
 
                 {/* Reply button */}
-                {!repliedTo.has(a.id) && a.userId !== (user?.id ?? "guest") && (
-                  <>
-                    {replyingTo === a.id ? (
-                      <div className="mt-2">
-                        <textarea
-                          value={replyText}
-                          onChange={(e) => setReplyText(e.target.value)}
-                          placeholder="Write a reply..."
-                          rows={2}
-                          className="w-full px-3 py-2 bg-ink border border-parchment/20 rounded-lg text-parchment/80 placeholder-parchment/30 focus:outline-none focus:border-gold text-xs resize-none mb-2"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleReply(a.id)}
-                            disabled={!replyText.trim()}
-                            className="px-4 py-1.5 bg-gold text-ink text-xs font-semibold rounded hover:bg-gold-light transition-all disabled:opacity-30"
-                          >
-                            Reply
-                          </button>
-                          <button
-                            onClick={() => { setReplyingTo(null); setReplyText(""); }}
-                            className="px-4 py-1.5 text-parchment/30 text-xs hover:text-parchment transition-colors"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setReplyingTo(a.id)}
-                        className="text-parchment/30 text-xs hover:text-gold transition-colors"
-                      >
-                        Reply →
-                      </button>
-                    )}
-                  </>
+                <button
+                  onClick={() => handleReply(ans.id)}
+                  className="text-xs text-parchment/20 hover:text-gold transition-colors"
+                >
+                  {user
+                    ? replyingTo === ans.id
+                      ? "Cancel"
+                      : "Reply →"
+                    : "🔒 Sign in to reply →"}
+                </button>
+
+                {replyingTo === ans.id && user && (
+                  <div className="mt-3 flex gap-2">
+                    <input
+                      type="text"
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      placeholder="Write a reply..."
+                      className="flex-1 bg-slate/20 border border-parchment/10 rounded-lg px-3 py-2 text-parchment placeholder-parchment/20 text-xs focus:outline-none focus:border-gold/40"
+                    />
+                    <button
+                      onClick={() => {
+                        setReplyingTo(null);
+                        setReplyText("");
+                      }}
+                      className="px-3 py-2 bg-gold text-ink text-xs font-semibold rounded-lg hover:bg-gold-light transition-all"
+                    >
+                      Post
+                    </button>
+                  </div>
                 )}
               </div>
             ))}
           </div>
         </div>
+
+        {showAuth && (
+          <AuthModal
+            onClose={() => setShowAuth(false)}
+            onSuccess={() => setShowAuth(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Question screen
+  return (
+    <div className="min-h-screen bg-ink pb-8">
+      <div className="max-w-2xl mx-auto px-5 pt-6">
+        {/* Question */}
+        <div className="mb-6">
+          <p className="text-gold/60 text-xs uppercase tracking-widest mb-3">
+            Today's Question
+          </p>
+          <p className="text-parchment font-serif text-2xl leading-relaxed">
+            {question.text}
+          </p>
+        </div>
+
+        {/* Scripture */}
+        <div className="border border-parchment/10 rounded-xl overflow-hidden mb-8">
+          <button
+            onClick={() => setScriptureOpen(!scriptureOpen)}
+            className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate/10 transition-all"
+          >
+            <span className="text-gold/60 text-xs uppercase tracking-widest">
+              {question.scripture.reference}
+            </span>
+            <span className="text-parchment/30">{scriptureOpen ? "−" : "+"}</span>
+          </button>
+          {scriptureOpen && (
+            <div className="px-5 py-4 bg-slate/10 border-t border-parchment/10">
+              <p className="text-parchment/60 text-sm italic leading-relaxed">
+                "{question.scripture.passage}"
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Answer */}
+        <div className="mb-6">
+          <p className="text-parchment/40 text-xs uppercase tracking-widest mb-3">
+            Your Reflection
+          </p>
+          {user ? (
+            <>
+              <textarea
+                value={answer}
+                onChange={(e) => setAnswer(e.target.value)}
+                placeholder="Take your time. There's no wrong answer here..."
+                rows={6}
+                className="w-full bg-slate/10 border border-parchment/10 rounded-xl px-5 py-4 text-parchment placeholder-parchment/20 text-sm leading-relaxed focus:outline-none focus:border-gold/30 resize-none"
+              />
+              <button
+                onClick={handleSubmit}
+                disabled={!answer.trim()}
+                className="mt-4 w-full py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide disabled:opacity-30"
+              >
+                Share with Community
+              </button>
+            </>
+          ) : (
+            <div className="border border-parchment/10 rounded-xl p-8 text-center">
+              <p className="text-parchment/40 text-sm mb-4">
+                Sign in to share your reflection and join the community discussion.
+              </p>
+              <button
+                onClick={() => setShowAuth(true)}
+                className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl text-sm uppercase tracking-wide hover:bg-gold-light transition-all"
+              >
+                Sign In to Answer
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Peek at community */}
+        <button
+          onClick={() => setScreen("feed")}
+          className="w-full py-3 text-center text-parchment/30 text-xs hover:text-parchment transition-colors border border-dashed border-parchment/10 rounded-xl"
+        >
+          See community reflections →
+        </button>
+      </div>
+
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onSuccess={() => setShowAuth(false)}
+        />
       )}
     </div>
   );
