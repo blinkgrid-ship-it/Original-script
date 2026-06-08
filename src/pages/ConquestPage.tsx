@@ -57,7 +57,7 @@ export default function ConquestPage() {
 
   if (screen === "complete") {
     return (
-      <div className="min-h-screen bg-ink flex items-center justify-center px-6">
+      <div className="min-h-screen bg-ink flex items-center justify-center px-6 pb-24">
         <div className="text-center max-w-md">
           <p className="text-6xl mb-6">🏆</p>
           <h1 className="text-3xl font-serif text-gold mb-4">{completion.title}</h1>
@@ -76,7 +76,7 @@ export default function ConquestPage() {
 
   if (screen === "study" && activeWord) {
     return (
-      <div className="min-h-screen bg-ink px-4 py-8 max-w-xl mx-auto">
+      <div className="min-h-screen bg-ink px-4 py-8 pb-24 max-w-xl mx-auto">
         <button
           onClick={() => setScreen("map")}
           className="text-parchment/40 hover:text-parchment text-sm mb-8 block"
@@ -84,7 +84,13 @@ export default function ConquestPage() {
           ← Back to map
         </button>
         <div className="text-center mb-8">
-          <p dir="rtl" className="text-7xl font-serif text-gold mb-3">{activeWord.hebrew}</p>
+          <p
+            dir="rtl"
+            className="text-7xl font-serif text-gold mb-3"
+            style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+          >
+            {activeWord.hebrew}
+          </p>
           <p className="text-parchment/60 italic text-lg">{activeWord.transliteration}</p>
         </div>
         <div className="space-y-4 mb-8">
@@ -117,7 +123,9 @@ export default function ConquestPage() {
                 <button
                   key={i}
                   onClick={() => setUsageIndex(i)}
-                  className={`w-2 h-2 rounded-full transition-all ${i === usageIndex ? "bg-gold w-5" : "bg-parchment/20"}`}
+                  className={`h-2 rounded-full transition-all ${
+                    i === usageIndex ? "bg-gold w-5" : "bg-parchment/20 w-2"
+                  }`}
                 />
               ))}
             </div>
@@ -137,8 +145,9 @@ export default function ConquestPage() {
     );
   }
 
+  // Map screen
   return (
-    <div className="min-h-screen bg-ink px-4 py-8 max-w-2xl mx-auto">
+    <div className="min-h-screen bg-ink px-4 py-8 pb-24 max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => navigate("/codex")}
@@ -182,15 +191,31 @@ export default function ConquestPage() {
               onClick={() => !locked && openWord(word)}
               disabled={locked}
               className={`w-full flex items-center gap-5 p-5 rounded-xl border transition-all text-left
-                ${done ? "border-gold/40 bg-gold/5" : locked ? "border-parchment/5 opacity-40 cursor-not-allowed" : "border-parchment/20 hover:border-gold/40 hover:bg-slate/10"}`}
+                ${done
+                  ? "border-gold/40 bg-gold/5"
+                  : locked
+                  ? "border-parchment/5 opacity-40 cursor-not-allowed"
+                  : "border-parchment/20 hover:border-gold/40 hover:bg-slate/10"
+                }`}
             >
-              <div className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl font-serif shrink-0
-                ${done ? "bg-gold text-ink" : "bg-slate/30 text-gold"}`}>
+              <div
+                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl font-serif shrink-0
+                  ${done ? "bg-gold text-ink" : "bg-slate/30 text-gold"}`}
+                style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+              >
                 {done ? "✓" : <span dir="rtl">{word.hebrew.split("")[0]}</span>}
               </div>
               <div className="flex-1 min-w-0">
-                <p dir="rtl" className="text-gold font-serif text-lg">{word.hebrew}</p>
-                <p className="text-parchment/50 text-sm">{word.transliteration} · {word.primaryMeaning}</p>
+                <p
+                  dir="rtl"
+                  className="text-gold font-serif text-lg"
+                  style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                >
+                  {word.hebrew}
+                </p>
+                <p className="text-parchment/50 text-sm">
+                  {word.transliteration} · {word.primaryMeaning}
+                </p>
               </div>
               <div className="text-right shrink-0">
                 <p className={`text-xs font-bold ${done ? "text-gold" : "text-parchment/30"}`}>

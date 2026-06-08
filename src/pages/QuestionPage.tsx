@@ -2,11 +2,12 @@ import { useState } from "react";
 import { getTodayQuestion, mockAnswers } from "../data/questionData";
 import type { Answer } from "../data/questionData";
 import { useAuth } from "../context/AuthContext";
-
+import { useNavigate } from "react-router-dom";
 type Screen = "question" | "feed";
 
 export default function QuestionPage() {
   const { user, signOut } = useAuth();
+  const navigate = useNavigate();
   const question = getTodayQuestion();
   const [screen, setScreen] = useState<Screen>("question");
   const [answer, setAnswer] = useState("");
@@ -95,6 +96,12 @@ export default function QuestionPage() {
               Sign out
             </button>
           )}
+          <button
+  onClick={() => navigate("/profile")}
+  className="w-8 h-8 rounded-full bg-slate/50 flex items-center justify-center text-xs font-bold text-gold hover:bg-slate/70 transition-all"
+>
+  {user?.email?.charAt(0).toUpperCase() ?? "?"}
+</button>
         </div>
       </div>
 
