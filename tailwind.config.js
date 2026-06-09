@@ -4,18 +4,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        parchment: "#F5F0E8",
-        ink: "#1A1410",
-        gold: "#C9A84C",
-        "gold-light": "#E8C96A",
-        ember: "#8B3A2A",
-        slate: "#3D4B5C",
+        // All colors reference CSS variables so light/dark theme works
+        // automatically on every component without any class changes.
+        ink: "rgb(var(--color-ink) / <alpha-value>)",
+        parchment: "rgb(var(--color-parchment) / <alpha-value>)",
+        gold: "rgb(var(--color-gold) / <alpha-value>)",
+        "gold-light": "rgb(var(--color-gold-light) / <alpha-value>)",
+        slate: "rgb(var(--color-slate) / <alpha-value>)",
+        ember: "rgb(var(--color-ember) / <alpha-value>)",
       },
-     fontFamily: {
-  serif: ["Playfair Display", "Georgia", "serif"],
-  lora: ["Lora", "Georgia", "serif"],
-  sans: ["DM Sans", "Inter", "system-ui", "sans-serif"],
-  hebrew: ["Frank Ruhl Libre", "serif"],
-},
+      fontFamily: {
+        serif: ["Playfair Display", "Georgia", "serif"],
+        lora: ["Lora", "Georgia", "serif"],
+        sans: ["DM Sans", "system-ui", "sans-serif"],
+        hebrew: ["Frank Ruhl Libre", "Georgia", "serif"],
+      },
+    },
+  },
   plugins: [],
-    }}};
+};

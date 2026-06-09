@@ -1,301 +1,592 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { genesis } from "../data/codexData";
 import { useAuth } from "../context/AuthContext";
+import { genesis } from "../data/codexData";
+import AuthModal from "../component/AuthModal";
+function getConquestDone(): number[] {
+  return JSON.parse(localStorage.getItem("os_conquest_done") ?? "[]");
+}
 
-type Language = "english" | "malayalam" | "hebrew";
+function getCodexRead(): number[] {
+  return JSON.parse(localStorage.getItem("os_codex_read") ?? "[]");
+}
 
 export default function CodexPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const [completed, setCompleted] = useState<number[]>(getCodexRead);
   const [currentChapter, setCurrentChapter] = useState(0);
-  const [language, setLanguage] = useState<Language>("english");
+  const [language, setLanguage] = useState<"english" | "malayalam" | "hebrew">("english");
   const [activeWord, setActiveWord] = useState<string | null>(null);
-  const [openExplanations, setOpenExplanations] = useState<Set<number>>(new Set());
-  const [completed, setCompleted] = useState<Set<number>>(new Set());
+  const [openExplanations, setOpenExplanations] = useState<Set<string>>(new Set());
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authContext, setAuthContext] = useState<string | null>(null);
+  const [conquestGate, setConquestGate] = useState<number | null>(null);
+  const [chapterComplete, setChapterComplete] = useState(false);
 
   const chapter = genesis[currentChapter];
 
-  function toggleExplanation(verseNumber: number) {
+  // ── Lock logic ──────────────────────────────────────────────────────────────
+
+  function isChapterLocked(index: number): boolean {
+    if (index === 0) return false;
+    if (!user) return true;
+    const conquestDone = getConquestDone();
+    if (index === 1) return !conquestDone.includes(1);
+    if (index === 2) return !conquestDone.includes(2);
+    return true;
+  }
+
+  type LockState =
+    | "free"
+    | "need-conquest-and-login"
+    | "need-login-conquest-done"
+    | "need-conquest"
+    | "unlocked";
+
+  function getLockState(index: number): LockState {
+    if (index === 0) return "free";
+    const conquestDone = getConquestDone();
+    const prevConquestDone = conquestDone.includes(index);
+    if (!user && !prevConquestDone) return "need-conquest-and-login";
+    if (!user && prevConquestDone) return "need-login-conquest-done";
+    if (user && !prevConquestDone) return "need-conquest";
+    return "unlocked";
+  }
+
+  function lockLabel(index: number): { icon: string; text: string; highlight?: boolean } {
+    const state = getLockState(index);
+    switch (state) {
+      case "free":
+        return { icon: "✦", text: "Free Access" };
+      case "need-conquest-and-login":
+        return { icon: "🔒", text: "Complete Ch" + index + " Conquest & Sign In" };
+      case "need-login-conquest-done":
+        return { icon: "✓", text: "Conquest done · Sign In to read", highlight: true };
+      case "need-conquest":
+        return { icon: "⚔️", text: "Complete Ch" + index + " Conquest first" };
+      case "unlocked":
+        return { icon: "✦", text: "Unlocked" };
+    }
+  }
+
+  // ── Chapter click ────────────────────────────────────────────────────────────
+
+  function handleChapterClick(index: number) {
+    if (index === 0) {
+      setCurrentChapter(0);
+      setChapterComplete(false);
+      return;
+    }
+    const state = getLockState(index);
+    if (state === "need-login-conquest-done") {
+      setAuthContext(
+        `You've already completed the Chapter ${index} Conquest! Sign in to unlock Chapter ${index + 1}.`
+      );
+      setShowAuthModal(true);
+      return;
+    }
+    if (state === "need-conquest-and-login") {
+      setAuthContext(null);
+      setShowAuthModal(true);
+      return;
+    }
+    if (state === "need-conquest") {
+      setConquestGate(index);
+      return;
+    }
+    // unlocked
+    setCurrentChapter(index);
+    setConquestGate(null);
+    setChapterComplete(false);
+  }
+
+  // ── Chapter complete ──────────────────────────────────────────────────────────
+
+  function markComplete() {
+    const chNum = chapter.number;
+    const existing = getCodexRead();
+    if (!existing.includes(chNum)) {
+      const updated = [...existing, chNum];
+      localStorage.setItem("os_codex_read", JSON.stringify(updated));
+      setCompleted(updated);
+    }
+    setChapterComplete(true);
+  }
+
+  // What to show after reading a chapter
+  function chapterCompleteNextStep(): {
+    heading: string;
+    body: string;
+    cta: string;
+    action: () => void;
+    secondaryCta?: string;
+    secondaryAction?: () => void;
+  } {
+    const conquestDone = getConquestDone();
+    const chNum = chapter.number;
+    const nextIndex = currentChapter + 1;
+
+    if (nextIndex >= genesis.length) {
+      return {
+        heading: "You've completed all chapters!",
+        body: "More chapters coming soon. Keep revisiting and deepening your understanding.",
+        cta: "Back to Chapter 1",
+        action: () => { setCurrentChapter(0); setChapterComplete(false); },
+      };
+    }
+
+    if (!conquestDone.includes(chNum)) {
+      // Conquest not done yet — primary action is to do conquest
+      return {
+        heading: `Chapter ${chNum} Read!`,
+        body: `Complete the Conquest Challenge to test what you learned — and unlock Chapter ${chNum + 1}.`,
+        cta: "Enter Conquest Mode →",
+        action: () => navigate(`/conquest?chapter=${chNum}`),
+        secondaryCta: "Back to chapter list",
+        secondaryAction: () => setChapterComplete(false),
+      };
+    }
+
+    if (!user) {
+      // Conquest done but not logged in
+      return {
+        heading: `Chapter ${chNum} Complete!`,
+        body: `You've already finished the Conquest Challenge for this chapter. Sign in to unlock Chapter ${chNum + 1}.`,
+        cta: "Sign In to Continue →",
+        action: () => {
+          setChapterComplete(false);
+          setAuthContext(`Sign in to unlock Chapter ${chNum + 1}. You've already completed the Conquest!`);
+          setShowAuthModal(true);
+        },
+        secondaryCta: "Back to chapter list",
+        secondaryAction: () => setChapterComplete(false),
+      };
+    }
+
+    // Logged in + conquest done → next chapter is unlocked
+    return {
+      heading: `Chapter ${chNum} Complete!`,
+      body: `Chapter ${chNum + 1} is now unlocked.`,
+      cta: `Read Chapter ${chNum + 1} →`,
+      action: () => {
+        setCurrentChapter(nextIndex);
+        setChapterComplete(false);
+      },
+    };
+  }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function toggleExplanation(key: string) {
     setOpenExplanations((prev) => {
       const next = new Set(prev);
-      next.has(verseNumber) ? next.delete(verseNumber) : next.add(verseNumber);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       return next;
     });
   }
 
-  function markComplete() {
-    setCompleted((prev) => new Set([...prev, currentChapter]));
-  }
-
-  // Gate chapter 2+ behind auth
-  if (currentChapter > 0 && !user) {
-    return (
-      <div className="min-h-screen bg-ink flex items-center justify-center px-6">
-        <div className="max-w-md w-full text-center">
-          <p className="text-5xl mb-4">📜</p>
-          <h2 className="text-2xl font-serif text-parchment mb-3">
-            Continue Your Journey
-          </h2>
-          <p className="text-parchment/50 text-sm mb-8">
-            Create a free account to unlock Chapter 2 and beyond.
-          </p>
-          <button
-            onClick={() => navigate("/")}
-            className="w-full py-4 bg-gold text-ink font-semibold rounded hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
-          >
-            Create Free Account
-          </button>
-          <button
-            onClick={() => setCurrentChapter(0)}
-            className="mt-4 text-parchment/30 text-xs hover:text-parchment transition-colors block mx-auto"
-          >
-            ← Back to Chapter 1
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-ink">
-      <div className="max-w-3xl mx-auto px-4 pt-6 pb-8">
-        {/* Chapter tabs */}
-        <div className="flex gap-2 overflow-x-auto py-3 mb-6">
+    <div className="min-h-screen bg-ink text-parchment flex">
+
+      {/* ── Chapter sidebar ── */}
+      <aside className="hidden md:flex flex-col w-64 border-r border-parchment/10 pt-6 pb-10 px-4 shrink-0">
+        <p className="text-parchment/30 text-xs uppercase tracking-widest mb-5 px-2">Genesis</p>
+        <div className="space-y-2">
           {genesis.map((ch, i) => {
-            const locked = i > 0 && !user;
+            const locked = isChapterLocked(i);
+            const label = lockLabel(i);
+            const isActive = currentChapter === i && !chapterComplete;
+            const isRead = completed.includes(ch.number);
+
             return (
               <button
                 key={ch.number}
-                onClick={() => !locked && setCurrentChapter(i)}
-                disabled={locked}
-                className={`px-4 py-2 rounded-lg text-sm whitespace-nowrap transition-all border ${
-                  currentChapter === i
-                    ? "border-gold bg-gold/10 text-gold"
+                onClick={() => handleChapterClick(i)}
+                className={`w-full text-left rounded-xl px-3 py-3 transition-all border ${
+                  isActive
+                    ? "border-gold/40 bg-gold/10"
                     : locked
-                    ? "border-parchment/5 text-parchment/20 cursor-not-allowed"
-                    : completed.has(i)
-                    ? "border-parchment/20 text-parchment/50"
-                    : "border-parchment/10 text-parchment/40 hover:border-parchment/30"
+                    ? "border-parchment/5 opacity-60 hover:opacity-80"
+                    : "border-parchment/10 hover:border-parchment/30"
                 }`}
               >
-                {locked ? "🔒 " : completed.has(i) ? "✓ " : ""}
-                Ch. {ch.number}
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-base">{locked ? "🔒" : isRead ? "✓" : "📖"}</span>
+                  <span
+                    className={`text-sm font-medium ${
+                      isActive ? "text-gold" : locked ? "text-parchment/40" : "text-parchment/80"
+                    }`}
+                  >
+                    Chapter {ch.number}
+                  </span>
+                </div>
+                <p className="text-parchment/30 text-xs pl-7 leading-tight mb-1.5">Genesis</p>
+                {/* Lock state label */}
+                <p
+                  className={`text-xs pl-7 leading-tight font-medium ${
+                    label.highlight ? "text-gold/70" : locked ? "text-ember/60" : "text-parchment/20"
+                  }`}
+                >
+                  {label.icon} {label.text}
+                </p>
               </button>
             );
           })}
         </div>
 
         {/* Language toggle */}
-        <div className="flex rounded-lg border border-parchment/10 overflow-hidden mb-8 w-fit">
-          {(["english", "malayalam", "hebrew"] as Language[]).map((lang) => (
+        <div className="mt-auto pt-6 border-t border-parchment/10">
+          <p className="text-parchment/30 text-xs uppercase tracking-widest mb-3">Language</p>
+          <div className="flex flex-col gap-1">
+            {(["english", "malayalam", "hebrew"] as const).map((lang) => (
+              <button
+                key={lang}
+                onClick={() => setLanguage(lang)}
+                className={`px-3 py-2 rounded-lg text-xs capitalize text-left transition-all ${
+                  language === lang
+                    ? "bg-gold/20 text-gold"
+                    : "text-parchment/40 hover:text-parchment/70"
+                }`}
+              >
+                {lang === "english" ? "English" : lang === "malayalam" ? "മലയാളം" : "עברית"}
+              </button>
+            ))}
+          </div>
+        </div>
+      </aside>
+
+      {/* ── Main content ── */}
+      <main className="flex-1 overflow-y-auto pb-12">
+
+        {/* Mobile chapter tabs */}
+        <div className="md:hidden flex border-b border-parchment/10 overflow-x-auto">
+          {genesis.map((ch, i) => {
+            const locked = isChapterLocked(i);
+            const label = lockLabel(i);
+            return (
+              <button
+                key={ch.number}
+                onClick={() => handleChapterClick(i)}
+                className={`flex-1 min-w-[100px] py-3 px-3 text-center border-b-2 transition-all ${
+                  currentChapter === i && !chapterComplete
+                    ? "border-gold text-gold"
+                    : "border-transparent text-parchment/40"
+                }`}
+              >
+                <p className="text-xs font-medium">{locked ? "🔒" : "📖"} Ch{ch.number}</p>
+                {label.highlight && (
+                  <p className="text-gold/60 text-[10px] mt-0.5">✓ Conquest done</p>
+                )}
+                {locked && !label.highlight && (
+                  <p className="text-ember/50 text-[10px] mt-0.5 leading-tight">{label.text}</p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Mobile language toggle */}
+        <div className="md:hidden flex gap-2 px-4 py-3 border-b border-parchment/10">
+          {(["english", "malayalam", "hebrew"] as const).map((lang) => (
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
-              className={`px-4 py-2 text-xs uppercase tracking-wider transition-all ${
+              className={`px-3 py-1.5 rounded-full text-xs transition-all ${
                 language === lang
-                  ? "bg-gold text-ink font-semibold"
-                  : "text-parchment/40 hover:text-parchment"
+                  ? "bg-gold/20 text-gold"
+                  : "text-parchment/40 border border-parchment/10 hover:border-parchment/30"
               }`}
             >
-              {lang === "english"
-                ? "English"
-                : lang === "malayalam"
-                ? "Malayalam"
-                : "עברית"}
+              {lang === "english" ? "English" : lang === "malayalam" ? "ML" : "עב"}
             </button>
           ))}
         </div>
 
-        {/* Verses */}
-        {chapter.verses.map((verse) => (
-          <div
-            key={verse.number}
-            className="mb-8 border border-parchment/10 rounded-xl overflow-hidden"
-          >
-            {/* Verse number */}
-            <div className="px-5 py-3 bg-slate/20 border-b border-parchment/10">
-              <span className="text-gold font-serif text-sm font-bold">
-                Verse {verse.number}
-              </span>
+        {/* ── Chapter complete screen ── */}
+        {chapterComplete ? (
+          <div className="max-w-2xl mx-auto px-6 pt-16 text-center">
+            <div className="w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center text-4xl mx-auto mb-6">
+              ✓
+            </div>
+            {(() => {
+              const step = chapterCompleteNextStep();
+              return (
+                <>
+                  <h2 className="text-3xl font-serif text-parchment mb-3">{step.heading}</h2>
+                  <p className="text-parchment/50 text-base leading-relaxed max-w-md mx-auto mb-8">
+                    {step.body}
+                  </p>
+                  <button
+                    onClick={step.action}
+                    className="w-full max-w-xs mx-auto block px-8 py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide mb-3"
+                  >
+                    {step.cta}
+                  </button>
+                  {step.secondaryCta && (
+                    <button
+                      onClick={step.secondaryAction}
+                      className="text-parchment/30 text-sm hover:text-parchment transition-colors"
+                    >
+                      {step.secondaryCta}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        ) : (
+          <>
+            {/* Chapter header */}
+            <div className="border-b border-parchment/10 px-6 py-8">
+              <p className="text-parchment/30 text-xs uppercase tracking-widest mb-2">
+                Genesis · Chapter {chapter.number}
+              </p>
+              <h1 className="text-3xl font-serif text-parchment mb-2">
+                Chapter {chapter.number}
+              </h1>
             </div>
 
-            {/* Verse text */}
-            <div className="p-5">
-              {language === "english" && (
-                <p className="text-parchment font-serif leading-relaxed text-base">
-                  {verse.english}
-                </p>
-              )}
-              {language === "malayalam" && (
-                <p className="text-parchment font-serif leading-relaxed text-base">
-                  {verse.malayalam}
-                </p>
-              )}
-              {language === "hebrew" && (
-                <div>
-                  <p
-                    dir="rtl"
-                    className="text-parchment leading-loose text-xl mb-4"
-                    style={{
-                      fontFamily: "'Frank Ruhl Libre', serif",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    {verse.hebrew}
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-end">
-                    {verse.hebrewWords.map((w, i) => (
-                      <button
-                        key={i}
-                        onClick={() =>
-                          setActiveWord(activeWord === w.word ? null : w.word)
-                        }
-                        dir="rtl"
-                        className={`px-2 py-1 rounded text-lg transition-all ${
-                          activeWord === w.word
-                            ? "bg-gold/20 border border-gold text-gold"
-                            : "hover:bg-gold/10 text-gold/80 border border-transparent"
-                        }`}
-                        style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
-                      >
-                        {w.word}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-parchment/20 text-xs mt-2 text-right">
-                    Tap a word to explore
-                  </p>
+            {/* Verses */}
+            <div className="px-6 py-8 max-w-3xl space-y-6">
+              {chapter.verses.map((verse) => {
+                const key = `${chapter.number}-${verse.number}`;
+                const isExpOpen = openExplanations.has(key);
 
-                  {/* Hebrew word bottom sheet */}
-                  {activeWord && (
-                    <div className="mt-4 border border-gold/20 rounded-xl p-5 bg-gold/5">
-                      {verse.hebrewWords
-                        .filter((w) => w.word === activeWord)
-                        .map((w, i) => (
-                          <div key={i}>
-                            <div className="flex items-start justify-between mb-3">
-                              <div>
-                                <p
-                                  dir="rtl"
-                                  className="text-gold text-4xl font-serif"
-                                  style={{
-                                    fontFamily: "'Frank Ruhl Libre', serif",
-                                  }}
-                                >
-                                  {w.word}
-                                </p>
-                                <p className="text-parchment/50 italic text-sm">
-                                  {w.transliteration}
-                                </p>
-                              </div>
-                              <button
-                                onClick={() => setActiveWord(null)}
-                                className="text-parchment/30 hover:text-parchment text-lg"
-                              >
-                                ✕
-                              </button>
-                            </div>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex gap-3">
-                                <span className="text-parchment/30 w-20 shrink-0">Root</span>
-                                <span className="text-parchment">{w.root}</span>
-                              </div>
-                              <div className="flex gap-3">
-                                <span className="text-parchment/30 w-20 shrink-0">Meaning</span>
-                                <span className="text-parchment">{w.meaning}</span>
-                              </div>
-                              <div className="flex gap-3">
-                                <span className="text-parchment/30 w-20 shrink-0">Usage</span>
-                                <span className="text-parchment/70 leading-relaxed">
-                                  {w.usage}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
+                return (
+                  <div
+                    key={verse.number}
+                    className="border border-parchment/10 rounded-2xl overflow-hidden"
+                  >
+                    {/* Verse header */}
+                    <div className="px-5 py-3 bg-slate/20 border-b border-parchment/10">
+                      <span className="text-parchment/40 text-xs uppercase tracking-widest">
+                        Verse {verse.number}
+                      </span>
                     </div>
+
+                    {/* Verse text */}
+                    <div className="px-5 py-5">
+                      {language === "english" && (
+                        <p className="text-parchment text-base leading-relaxed">{verse.english}</p>
+                      )}
+                      {language === "malayalam" && (
+                        <p className="text-parchment text-base leading-relaxed font-lora">
+                          {verse.malayalam}
+                        </p>
+                      )}
+                      {language === "hebrew" && (
+                        <p
+                          className="text-parchment text-xl leading-loose font-hebrew"
+                          dir="rtl"
+                        >
+                          {verse.hebrew}
+                        </p>
+                      )}
+
+                      {/* Hebrew word pills */}
+                      {verse.hebrewWords && verse.hebrewWords.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {verse.hebrewWords.map((hw) => (
+                            <button
+                              key={hw.word}
+                              onClick={() =>
+                                setActiveWord(activeWord === hw.word ? null : hw.word)
+                              }
+                              className={`px-3 py-1.5 rounded-lg border text-sm transition-all ${
+                                activeWord === hw.word
+                                  ? "border-gold bg-gold/20 text-gold"
+                                  : "border-parchment/15 text-parchment/50 hover:border-parchment/40"
+                              }`}
+                            >
+                              <span
+                                className="font-hebrew mr-1"
+                                dir="rtl"
+                                style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                              >
+                                {hw.word}
+                              </span>
+                              <span className="text-xs opacity-60">({hw.transliteration})</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Active word detail */}
+                      {activeWord &&
+                        verse.hebrewWords?.find((hw) => hw.word === activeWord) && (
+                          <div className="mt-4 border border-gold/20 rounded-xl p-4 bg-gold/5">
+                            {(() => {
+                              const hw = verse.hebrewWords!.find((h) => h.word === activeWord)!;
+                              return (
+                                <>
+                                  <div className="flex items-start justify-between mb-2">
+                                    <span
+                                      className="text-gold text-2xl font-hebrew"
+                                      dir="rtl"
+                                      style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                                    >
+                                      {hw.word}
+                                    </span>
+                                    <button
+                                      onClick={() => setActiveWord(null)}
+                                      className="text-parchment/30 hover:text-parchment text-lg"
+                                    >
+                                      ×
+                                    </button>
+                                  </div>
+                                  <p className="text-parchment/50 text-xs mb-1">
+                                    Transliteration:{" "}
+                                    <span className="text-parchment/70 italic">{hw.transliteration}</span>
+                                  </p>
+                                  <p className="text-parchment/50 text-xs mb-1">
+                                    Root:{" "}
+                                    <span className="text-parchment/70 font-hebrew" dir="rtl">
+                                      {hw.root}
+                                    </span>
+                                  </p>
+                                  <p className="text-parchment/50 text-xs mb-2">
+                                    Meaning:{" "}
+                                    <span className="text-gold/80">{hw.meaning}</span>
+                                  </p>
+                                  <p className="text-parchment/40 text-xs leading-relaxed italic">
+                                    {hw.usage}
+                                  </p>
+                                </>
+                              );
+                            })()}
+                          </div>
+                        )}
+                    </div>
+
+                    {/* Academic explanation accordion */}
+                    <div className="border-t border-parchment/10">
+                      <button
+                        onClick={() => toggleExplanation(key)}
+                        className="w-full px-5 py-3 flex items-center justify-between text-parchment/40 hover:text-parchment/70 transition-colors text-sm"
+                      >
+                        <span>Academic Explanation</span>
+                        <span className="text-lg">{isExpOpen ? "−" : "+"}</span>
+                      </button>
+                      {isExpOpen && (
+                        <div className="px-5 pb-4">
+                          <p className="text-parchment/50 text-sm leading-relaxed">
+                            {verse.explanation}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Real life example */}
+                    {verse.realLifeExample && (
+                      <div className="border-t border-parchment/10 px-5 py-4 bg-slate/10">
+                        <p className="text-parchment/30 text-xs uppercase tracking-widest mb-2">
+                          Real Life Example
+                        </p>
+                        <p className="text-parchment/50 text-sm leading-relaxed italic">
+                          {verse.realLifeExample}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mark complete button */}
+            <div className="px-6 pb-8 max-w-3xl text-center">
+              {completed.includes(chapter.number) ? (
+                <div>
+                  <div className="inline-flex items-center gap-2 px-5 py-3 rounded-full border border-gold/30 bg-gold/10 text-gold text-sm mb-2">
+                    ✓ Chapter {chapter.number} Read
+                  </div>
+                  {/* Show next step hint even if already read */}
+                  {currentChapter < genesis.length - 1 && (
+                    <p
+                      className="text-parchment/30 text-xs mt-3 cursor-pointer hover:text-parchment/60 transition-colors"
+                      onClick={() => setChapterComplete(true)}
+                    >
+                      See what to do next →
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <button
+                    onClick={markComplete}
+                    className="px-8 py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
+                  >
+                    I Have Read This Chapter
+                  </button>
+                  {currentChapter < genesis.length - 1 && (
+                    <p className="text-parchment/30 text-xs mt-3">
+                      Unlocks Conquest Mode for Chapter {chapter.number}
+                    </p>
                   )}
                 </div>
               )}
             </div>
-
-            {/* Explanation accordion */}
-            <div className="border-t border-parchment/10">
-              <button
-                onClick={() => toggleExplanation(verse.number)}
-                className="w-full px-5 py-3 flex items-center justify-between hover:bg-slate/10 transition-all"
-              >
-                <span className="text-parchment/50 text-sm">Academic Explanation</span>
-                <span className="text-gold text-lg">
-                  {openExplanations.has(verse.number) ? "−" : "+"}
-                </span>
-              </button>
-              {openExplanations.has(verse.number) && (
-                <div className="px-5 pb-5">
-                  <p className="text-parchment/60 text-sm leading-relaxed">
-                    {verse.explanation}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Real Life Example */}
-            <div className="border-t border-parchment/10 bg-amber-950/20 px-5 py-4">
-              <p className="text-xs text-gold/50 uppercase tracking-widest mb-2">
-                Real Life Example
-              </p>
-              <p className="text-parchment/60 text-sm leading-relaxed italic">
-                {verse.realLifeExample}
-              </p>
-            </div>
-          </div>
-        ))}
-
-        {/* Completion */}
-        {!completed.has(currentChapter) ? (
-          <div className="text-center mt-8">
-            <button
-              onClick={markComplete}
-              className="px-8 py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
-            >
-              I Have Read This Chapter
-            </button>
-            <p className="text-parchment/30 text-xs mt-3">
-              Unlocks Conquest Mode for Chapter {chapter.number}
-            </p>
-          </div>
-        ) : (
-          <div className="text-center mt-8 border border-gold/30 rounded-xl p-8 bg-gold/5">
-            <p className="text-3xl mb-3">✓</p>
-            <h3 className="text-gold font-serif text-xl mb-2">
-              Chapter {chapter.number} Complete
-            </h3>
-            <p className="text-parchment/50 text-sm mb-6">
-              Conquest Mode for this chapter is now unlocked.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <button
-                onClick={() => navigate(`/conquest?chapter=${chapter.number}`)}
-                className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
-              >
-                Enter Conquest Mode →
-              </button>
-              {currentChapter < genesis.length - 1 && (
-                <button
-                  onClick={() => {
-                    if (!user) navigate("/");
-                    else setCurrentChapter(currentChapter + 1);
-                  }}
-                  className="px-6 py-3 border border-parchment/20 text-parchment/60 rounded-xl hover:border-gold hover:text-gold transition-all text-sm"
-                >
-                  Next Chapter →
-                </button>
-              )}
-            </div>
-          </div>
+          </>
         )}
-      </div>
+      </main>
+
+      {/* ── Conquest gate modal ── */}
+      {conquestGate !== null && (
+        <div className="fixed inset-0 bg-ink/90 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-slate/90 border border-parchment/10 rounded-2xl p-8 w-full max-w-md text-center">
+            <div className="w-14 h-14 rounded-full bg-ember/20 flex items-center justify-center text-2xl mx-auto mb-4">
+              ⚔️
+            </div>
+            <h3 className="text-parchment font-serif text-xl mb-2">
+              Chapter {conquestGate + 1} is Locked
+            </h3>
+            <p className="text-parchment/50 text-sm leading-relaxed mb-6">
+              Complete the <span className="text-gold">Chapter {conquestGate} Conquest Challenge</span> to unlock Chapter {conquestGate + 1}. Test your knowledge of the Hebrew words you've learned.
+            </p>
+            <button
+              onClick={() => {
+                setConquestGate(null);
+                navigate(`/conquest?chapter=${conquestGate}`);
+              }}
+              className="w-full py-3.5 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide mb-3"
+            >
+              Enter Conquest Mode →
+            </button>
+            <button
+              onClick={() => setConquestGate(null)}
+              className="text-parchment/30 text-sm hover:text-parchment transition-colors"
+            >
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Auth modal ── */}
+      {showAuthModal && (
+        <div className="fixed inset-0 z-50">
+          {/* Context message banner above modal */}
+          {authContext && (
+            <div className="fixed top-0 inset-x-0 z-60 bg-gold/10 border-b border-gold/20 px-4 py-3 text-center">
+              <p className="text-gold text-sm">{authContext}</p>
+            </div>
+          )}
+          <AuthModal
+            onClose={() => {
+              setShowAuthModal(false);
+              setAuthContext(null);
+            }}
+            onSuccess={() => {
+              setShowAuthModal(false);
+              setAuthContext(null);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

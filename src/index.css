@@ -2,8 +2,64 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-ink text-parchment font-sans;
-  }
+/* ─── Theme colour tokens ───────────────────────────────────────────────────
+   Values are space-separated R G B — no rgb() wrapper.
+   Tailwind uses them as: rgb(var(--color-ink) / <alpha>)
+   This makes every opacity modifier (bg-ink/50, text-parchment/30, etc.) work
+   automatically in both themes. ─────────────────────────────────────────── */
+
+:root {
+  /* Dark theme (default) — dark parchment manuscript aesthetic */
+  --color-ink:        15 14 12;       /* #0F0E0C  near-black background   */
+  --color-parchment:  245 240 232;    /* #F5F0E8  warm cream text          */
+  --color-gold:       212 168 83;     /* #D4A853  gold accent              */
+  --color-gold-light: 232 201 122;    /* #E8C97A  lighter gold hover       */
+  --color-slate:      30 28 26;       /* #1E1C1A  dark card backgrounds    */
+  --color-ember:      192 57 43;      /* #C0392B  red accent               */
+}
+
+[data-theme="light"] {
+  /* Light theme — aged parchment / daylight manuscript aesthetic */
+  --color-ink:        245 240 232;    /* #F5F0E8  cream background         */
+  --color-parchment:  28 24 14;       /* #1C180E  dark sepia text          */
+  --color-gold:       139 94 26;      /* #8B5E1A  richer gold on light bg  */
+  --color-gold-light: 160 114 32;     /* #A07220  lighter variant          */
+  --color-slate:      235 228 215;    /* #EBE4D7  warm off-white cards     */
+  --color-ember:      165 43 30;      /* #A52B1E  deeper red on light bg   */
+}
+
+/* ─── Global base ───────────────────────────────────────────────────────── */
+
+html, body {
+  background-color: rgb(var(--color-ink));
+  color: rgb(var(--color-parchment));
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* Smooth theme transition for every element */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+}
+
+/* Exception: don't transition transforms/opacity (breaks animations) */
+.no-theme-transition,
+[class*="animate-"],
+[class*="transition-"] {
+  transition: none;
+}
+
+/* ─── Scrollbar (dark theme) ────────────────────────────────────────────── */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgb(var(--color-ink));
+}
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--color-parchment) / 0.15);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--color-parchment) / 0.25);
 }

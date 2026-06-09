@@ -3,6 +3,20 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { getTodayQuestion, mockAnswers } from "../data/questionData";
 import AuthModal from "../component/AuthModal";
+const mockArtifact = {
+  period: "Mesopotamian Period · c. 2217–2193 BCE",
+  title: "Cylinder Seal of Ibni-Sharrum",
+  description:
+    "This Akkadian cylinder seal, attributed to the scribe Ibni-Sharrum during the reign of Shar-Kali-Sharri, depicts a mythological scene involving water deities. The craftsmanship demonstrates the advanced artistic and administrative sophistication of the Akkadian Empire — contemporaneous with the biblical patriarchal period.",
+  correlation:
+    "The Akkadian administrative infrastructure, evidenced by cylinder seals like this, provides archaeological context for understanding the socio-political environment described in Genesis 10–12 — the post-Babel dispersion and the emergence of Abram from Ur of the Chaldees.",
+  source: "Louvre Museum, Paris",
+  hebrewTerms: [
+    { word: "אַבְרָם", transliteration: "Avram" },
+    { word: "אוּר", transliteration: "Ur" },
+    { word: "כַּשְׂדִּים", transliteration: "Kasdim" },
+  ],
+};
 
 export default function LandingPage() {
   const navigate = useNavigate();
@@ -26,7 +40,6 @@ export default function LandingPage() {
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-8 tracking-wider">
           📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
         </div>
-
         <h1 className="text-5xl md:text-6xl font-serif text-parchment mb-5 leading-tight max-w-3xl mx-auto">
           The <span className="text-gold">Original Script</span>
         </h1>
@@ -34,18 +47,15 @@ export default function LandingPage() {
           Scripture as it was written. In the language it was spoken.
           With the depth it was meant to carry.
         </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+        <div className="flex justify-center mb-16">
+          {/* No requireAuth here — Ch1 is free for everyone */}
           <button
-            onClick={() => requireAuth(() => navigate("/codex"))}
-            className="px-7 py-3.5 bg-gold text-ink font-semibold rounded-lg hover:bg-gold-light transition-all text-sm"
+            onClick={() => navigate("/codex")}
+            className="px-8 py-4 bg-gold text-ink font-semibold rounded-lg hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
           >
             Open the Codex →
           </button>
-       
         </div>
-
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto border-t border-parchment/10 pt-10">
           {[
             { value: "3", label: "Genesis Chapters" },
@@ -68,9 +78,7 @@ export default function LandingPage() {
         <p className="text-parchment/30 text-xs uppercase tracking-widest text-center mb-10">
           — Question of the Day —
         </p>
-
         <div className="max-w-3xl mx-auto">
-          {/* Featured question card */}
           <div className="border border-gold/20 rounded-2xl overflow-hidden mb-8">
             <div className="bg-slate/20 px-6 pt-8 pb-6">
               <div className="flex items-center gap-3 mb-5">
@@ -88,11 +96,9 @@ export default function LandingPage() {
               <p className="text-parchment font-serif text-2xl leading-relaxed mb-6">
                 {question.text}
               </p>
-
-              {/* Scripture toggle */}
               <button
                 onClick={() => setScriptureOpen(!scriptureOpen)}
-                className="flex items-center gap-3 text-left w-full group"
+                className="flex items-center gap-3 text-left w-full"
               >
                 <span className="w-0.5 h-6 bg-gold/40 rounded-full" />
                 <span className="text-gold/70 text-sm italic font-serif">
@@ -110,9 +116,7 @@ export default function LandingPage() {
                 </div>
               )}
             </div>
-
-            {/* Answer / login CTA */}
-            <div className="px-6 py-5 border-t border-parchment/10 flex items-center justify-between">
+            <div className="px-6 py-5 border-t border-parchment/10 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3 text-xs text-parchment/30">
                 <span>{mockAnswers.length} reflections shared</span>
                 <span>·</span>
@@ -142,17 +146,12 @@ export default function LandingPage() {
           </p>
           <div className="space-y-3 mb-4">
             {previewAnswers.map((ans) => (
-              <div
-                key={ans.id}
-                className="border border-parchment/10 rounded-xl p-5 bg-slate/10"
-              >
+              <div key={ans.id} className="border border-parchment/10 rounded-xl p-5 bg-slate/10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-7 h-7 rounded-full bg-slate/50 flex items-center justify-center text-xs text-gold font-bold">
                     {ans.userName.charAt(0)}
                   </div>
-                  <span className="text-parchment/60 text-sm font-medium">
-                    {ans.userName}
-                  </span>
+                  <span className="text-parchment/60 text-sm font-medium">{ans.userName}</span>
                   <span className="text-parchment/20 text-xs">·</span>
                   <span className="text-parchment/30 text-xs">{ans.pathway}</span>
                   <span className="ml-auto text-parchment/20 text-xs">{ans.timeAgo}</span>
@@ -178,71 +177,99 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Archaeological Artifact of the Day ── */}
+      <section className="border-b border-parchment/10 py-14 px-6 bg-slate/5">
+        <p className="text-parchment/30 text-xs uppercase tracking-widest text-center mb-10">
+          — Archaeological Artifact of the Day —
+        </p>
+        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          {/* Artifact image placeholder */}
+          <div className="aspect-video rounded-2xl border border-parchment/10 overflow-hidden bg-slate/20 flex flex-col items-center justify-center relative">
+            <p className="text-7xl mb-3">🏛</p>
+            <p className="text-parchment/20 text-xs absolute bottom-3 left-4">
+              Wikimedia Commons · Public Domain
+            </p>
+          </div>
+
+          {/* Content */}
+          <div>
+            <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">
+              🏛 {mockArtifact.period}
+            </p>
+            <h3 className="text-parchment font-serif text-2xl font-bold mb-4 leading-snug">
+              {mockArtifact.title}
+            </h3>
+            <p className="text-parchment/50 text-sm leading-relaxed mb-5">
+              {mockArtifact.description}
+            </p>
+
+            <div className="border border-parchment/10 rounded-xl p-4 bg-slate/20 mb-5">
+              <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">
+                Biblical Correlation
+              </p>
+              <p className="text-parchment/50 text-sm leading-relaxed">
+                {mockArtifact.correlation}
+              </p>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-parchment/30 text-xs uppercase tracking-widest mb-3">
+                Key Hebrew Terms
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {mockArtifact.hebrewTerms.map((t) => (
+                  <div
+                    key={t.word}
+                    className="border border-gold/20 rounded-lg px-3 py-1.5 bg-gold/5"
+                  >
+                    <span
+                      className="text-gold text-base mr-2"
+                      style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                      dir="rtl"
+                    >
+                      {t.word}
+                    </span>
+                    <span className="text-parchment/40 text-xs">({t.transliteration})</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <p className="text-parchment/20 text-xs">{mockArtifact.source}</p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Feature Cards ── */}
       <section className="py-16 px-6 border-b border-parchment/10">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-serif text-parchment mb-3">The Maze</h2>
           <p className="text-parchment/40 text-base">
-            Three pathways into the original text.
+            Two pathways into the original text.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
-          {/* Codex */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-3xl mx-auto">
+          {/* Codex — no auth required, Ch1 is free */}
           <button
-            onClick={() => requireAuth(() => navigate("/codex"))}
+            onClick={() => navigate("/codex")}
             className="border border-parchment/10 rounded-2xl p-7 text-left hover:border-gold/40 transition-all group bg-slate/10"
           >
             <div className="w-11 h-11 rounded-xl bg-gold/20 flex items-center justify-center text-xl mb-5">
               📜
             </div>
-            <h3 className="text-parchment font-serif text-lg mb-2 group-hover:text-gold transition-colors">
+            <h3 className="text-parchment font-serif text-xl mb-2 group-hover:text-gold transition-colors">
               The Codex
             </h3>
             <p className="text-parchment/40 text-sm leading-relaxed mb-4">
               Read Genesis in English, Malayalam and Hebrew. Tap each Hebrew word for root
-              meanings, etymology, and scholarly context.
+              meanings and etymology. Chapter 1 is free — login to continue deeper.
             </p>
-            {!user && (
-              <span className="text-parchment/20 text-xs border border-parchment/10 rounded px-2 py-1">
-                Login to unlock
-              </span>
-            )}
-            {user && (
-              <span className="text-gold/50 text-xs uppercase tracking-wider">
-                Genesis · 3 Chapters →
-              </span>
-            )}
+            <span className="text-gold/50 text-xs uppercase tracking-wider">
+              Chapter 1 Free · Login for More →
+            </span>
           </button>
 
-          {/* Conquest */}
-          <button
-            onClick={() => requireAuth(() => navigate("/conquest?chapter=1"))}
-            className="border border-parchment/10 rounded-2xl p-7 text-left hover:border-gold/40 transition-all group bg-slate/10"
-          >
-            <div className="w-11 h-11 rounded-xl bg-gold/20 flex items-center justify-center text-xl mb-5">
-              ⚔️
-            </div>
-            <h3 className="text-parchment font-serif text-lg mb-2 group-hover:text-gold transition-colors">
-              Conquest Study Mode
-            </h3>
-            <p className="text-parchment/40 text-sm leading-relaxed mb-4">
-              Sequential word-by-word mastery with gamified progression. Earn XP, unlock
-              chapters, build lasting biblical vocabulary.
-            </p>
-            {!user && (
-              <span className="text-parchment/20 text-xs border border-parchment/10 rounded px-2 py-1">
-                Login to unlock
-              </span>
-            )}
-            {user && (
-              <span className="text-gold/50 text-xs uppercase tracking-wider">
-                11 words · Chapter 1 →
-              </span>
-            )}
-          </button>
-
-          {/* Profile / Journey */}
+          {/* Profile */}
           <button
             onClick={() => requireAuth(() => navigate("/profile"))}
             className="border border-parchment/10 rounded-2xl p-7 text-left hover:border-gold/40 transition-all group bg-slate/10"
@@ -250,19 +277,18 @@ export default function LandingPage() {
             <div className="w-11 h-11 rounded-xl bg-gold/20 flex items-center justify-center text-xl mb-5">
               ◎
             </div>
-            <h3 className="text-parchment font-serif text-lg mb-2 group-hover:text-gold transition-colors">
+            <h3 className="text-parchment font-serif text-xl mb-2 group-hover:text-gold transition-colors">
               My Journey
             </h3>
             <p className="text-parchment/40 text-sm leading-relaxed mb-4">
               Track your 30-day answer history, build daily streaks, and see your growth
               across questions and chapters over time.
             </p>
-            {!user && (
+            {!user ? (
               <span className="text-parchment/20 text-xs border border-parchment/10 rounded px-2 py-1">
                 Login to unlock
               </span>
-            )}
-            {user && (
+            ) : (
               <span className="text-gold/50 text-xs uppercase tracking-wider">
                 Calendar · Streaks →
               </span>
@@ -318,35 +344,28 @@ export default function LandingPage() {
           </div>
           <div>
             <p className="text-parchment font-serif font-bold mb-4">Quick Links</p>
-            <ul className="space-y-2 text-sm">
+            <div className="space-y-2 text-sm flex flex-col items-start">
               <button
-                onClick={() => requireAuth(() => navigate("/codex"))}
-                className="block text-parchment/40 hover:text-gold transition-colors"
+                onClick={() => navigate("/codex")}
+                className="text-parchment/40 hover:text-gold transition-colors"
               >
                 Enter the Codex
               </button>
               <button
-                onClick={() => requireAuth(() => navigate("/conquest?chapter=1"))}
-                className="block text-parchment/40 hover:text-gold transition-colors"
-              >
-                Conquest Study Mode
-              </button>
-              <button
                 onClick={() => navigate("/question")}
-                className="block text-parchment/40 hover:text-gold transition-colors"
+                className="text-parchment/40 hover:text-gold transition-colors"
               >
                 Today's Question
               </button>
               <button
                 onClick={() => requireAuth(() => navigate("/profile"))}
-                className="block text-parchment/40 hover:text-gold transition-colors"
+                className="text-parchment/40 hover:text-gold transition-colors"
               >
                 My Journey
               </button>
-            </ul>
+            </div>
           </div>
         </div>
-
         <div className="border-t border-parchment/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2">
             <span className="text-gold text-base">📜</span>
