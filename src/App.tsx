@@ -7,6 +7,7 @@ import QuestionPage from "./pages/QuestionPage";
 import CodexPage from "./pages/CodexPage";
 import ConquestPage from "./pages/ConquestPage";
 import ProfilePage from "./pages/ProfilePage";
+import PublicProfilePage from "./pages/PublicProfilePage";
 import TopNav from "./component/TopNav";
 
 function AppRoutes() {
@@ -23,6 +24,7 @@ function AppRoutes() {
         <Route path="/codex" element={<CodexPage />} />
         <Route path="/conquest" element={<ConquestPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/community/:userId" element={<PublicProfilePage />} />
       </Routes>
     </>
   );
@@ -30,8 +32,6 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    // ThemeProvider must be outermost so the data-theme attribute on <html>
-    // is set before any child renders. AuthProvider sits inside.
     <ThemeProvider>
       <AuthProvider>
         <AppRoutes />

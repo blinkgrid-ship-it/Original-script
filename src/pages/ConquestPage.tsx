@@ -1,231 +1,327 @@
 import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { getChapterWords, type ConquestWord } from "../data/conquestData";
+import { getChapterWords } from "../data/conquestData";
 
-type Screen = "map" | "study" | "complete";
+// ── Particle burst + XP float animation ──────────────────────────────────────
 
-const chapterCompletionMessages: Record<number, { title: string; message: string; next: string }> = {
-  1: {
-    title: "Creation Conquered",
-    message: "You've mastered the Hebrew words of Genesis Chapter 1 — the language of creation itself. Bereishit. Bara. Elohim. These words built a universe.",
-    next: "Enter the Sabbath →",
-  },
-  2: {
-    title: "Sabbath Mastered",
-    message: "You now carry the language of sacred rest. Vaykhulu. Vayishbot. Vayekadesh. The first holy thing God made was not a place — it was time.",
-    next: "Enter the Fall →",
-  },
-  3: {
-    title: "The Fall Understood",
-    message: "You've studied the words of the oldest deception ever recorded. Nachash. Arum. Tov vaRa. The serpent's cunning lives in language — and now you see it clearly.",
-    next: "Return to the Codex →",
-  },
-};
+// 12 particles spread evenly around a full circle
+const PARTICLE_ANGLES = Array.from({ length: 12 }, (_, i) => (i / 12) * 2 * Math.PI);
+const PARTICLE_COLORS = [
+  "#D4A853", "#E8C97A", "#D4A853", "#F5F0E8",
+  "#D4A853", "#E8C97A", "#D4A853", "#F5F0E8",
+  "#D4A853", "#E8C97A", "#D4A853", "#F5F0E8",
+];
+
+function MasteredAnimation({ xp }: { xp: number }) {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-50 flex items-center justify-center">
+      {/* Particles */}
+      {PARTICLE_ANGLES.map((angle, i) => {
+        const distance = 80 + Math.random() * 40;
+        const tx = `${Math.cos(angle) * distance}px`;
+        const ty = `${Math.sin(angle) * distance}px`;
+        const delay = `${i * 20}ms`;
+        const size = 6 + (i % 3) * 3;
+
+        return (
+          <div
+            key={i}
+            className="absolute rounded-full animate-particle"
+            style={{
+              width: size,
+              height: size,
+              backgroundColor: PARTICLE_COLORS[i],
+              "--tx": tx,
+              "--ty": ty,
+              animationDelay: delay,
+              top: "50%",
+              left: "50%",
+              marginTop: -size / 2,
+              marginLeft: -size / 2,
+            } as React.CSSProperties}
+          />
+        );
+      })}
+
+      {/* +XP floating badge */}
+      <div
+        className="absolute animate-xp-float select-none"
+        style={{ top: "42%", left: "50%", transform: "translateX(-50%)" }}
+      >
+        <div className="px-4 py-2 rounded-full bg-gold text-ink font-bold text-lg shadow-lg">
+          +{xp} XP
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ConquestPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const chapterNumber = parseInt(searchParams.get("chapter") ?? "1");
+  const chapterNumber = Number(searchParams.get("chapter") ?? "1");
+
   const conquestChapter = getChapterWords(chapterNumber);
+  const words = conquestChapter?.words ?? [];
 
-  const [screen, setScreen] = useState<Screen>("map");
-  const [activeWord, setActiveWord] = useState<ConquestWord | null>(null);
-  const [studied, setStudied] = useState<Set<string>>(new Set());
-  const [totalXP, setTotalXP] = useState(0);
-  const [usageIndex, setUsageIndex] = useState(0);
+  const [mastered, setMastered] = useState<Set<number>>(new Set());
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [openSections, setOpenSections] = useState<Set<string>>(new Set());
+  const [screen, setScreen] = useState<"study" | "complete">("study");
+  const [showAnimation, setShowAnimation] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
 
-  const completion = chapterCompletionMessages[chapterNumber] ?? chapterCompletionMessages[1];
+  const currentWord = words[currentIndex];
 
-  function openWord(word: ConquestWord) {
-    setActiveWord(word);
-    setUsageIndex(0);
-    setScreen("study");
+  function toggleSection(key: string) {
+    setOpenSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   }
 
-  function completeWord() {
-    if (!activeWord) return;
-    const next = new Set(studied);
-    next.add(activeWord.id);
-    setStudied(next);
-    setTotalXP((xp) => xp + activeWord.xp);
-    if (next.size === conquestChapter.words.length) {
-      setScreen("complete");
-    } else {
-      setScreen("map");
-    }
+  function handleMasterWord() {
+    if (!currentWord || showAnimation) return;
+
+    setShowAnimation(true);
+
+    setTimeout(() => { setIsExiting(true); }, 500);
+
+    setTimeout(() => {
+      setShowAnimation(false);
+      setIsExiting(false);
+      setOpenSections(new Set());
+
+      const next = new Set(mastered);
+      next.add(currentIndex);
+      setMastered(next);
+
+      if (next.size >= words.length) {
+        const conquestDone: number[] = JSON.parse(
+          localStorage.getItem("os_conquest_done") ?? "[]"
+        );
+        if (!conquestDone.includes(chapterNumber)) {
+          localStorage.setItem(
+            "os_conquest_done",
+            JSON.stringify([...conquestDone, chapterNumber])
+          );
+        }
+        setScreen("complete");
+      } else {
+        let next_index = (currentIndex + 1) % words.length;
+        while (next.has(next_index)) {
+          next_index = (next_index + 1) % words.length;
+        }
+        setCurrentIndex(next_index);
+      }
+    }, 850);
   }
+
+  const wordXp = currentWord?.xp ?? 25;
+
+  // ── Complete screen ──────────────────────────────────────────────────────────
 
   if (screen === "complete") {
     return (
-      <div className="min-h-screen bg-ink flex items-center justify-center px-6 pb-8">
-        <div className="text-center max-w-md">
-          <p className="text-6xl mb-6">🏆</p>
-          <h1 className="text-3xl font-serif text-gold mb-4">{completion.title}</h1>
-          <p className="text-parchment/60 mb-4 leading-relaxed">{completion.message}</p>
-          <p className="text-gold font-bold text-xl mb-8">+{totalXP} XP earned</p>
+      <div className="min-h-screen bg-ink text-parchment flex flex-col items-center justify-center px-6 pb-8 text-center">
+        <div className="w-20 h-20 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center text-4xl mb-6">
+          ⚔️
+        </div>
+        <h1 className="text-3xl font-serif text-parchment mb-3">
+          Chapter {chapterNumber} Conquered!
+        </h1>
+        <p className="text-parchment/50 text-base leading-relaxed max-w-sm mb-2">
+          You've mastered all {words.length} Hebrew words from Chapter {chapterNumber}.
+        </p>
+        <p className="text-gold/70 text-sm mb-10">
+          +{words.reduce((sum, w) => sum + (w.xp ?? 25), 0)} XP earned
+        </p>
+
+        <div className="flex flex-col gap-3 w-full max-w-xs">
           <button
-            onClick={() => navigate(chapterNumber < 3 ? `/codex?chapter=${chapterNumber + 1}` : "/codex")}
-            className="px-8 py-4 bg-gold text-ink font-semibold rounded hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
+            onClick={() => navigate("/codex")}
+            className="py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
           >
-            {completion.next}
+            Back to Codex →
+          </button>
+          <button
+            onClick={() => navigate("/profile")}
+            className="py-3.5 border border-parchment/15 text-parchment/60 rounded-xl hover:border-parchment/30 text-sm transition-all"
+          >
+            View My Progress
           </button>
         </div>
       </div>
     );
   }
 
-  if (screen === "study" && activeWord) {
+  // ── No words found ───────────────────────────────────────────────────────────
+
+  if (!currentWord) {
     return (
-      <div className="min-h-screen bg-ink px-4 py-8 pb-8 max-w-xl mx-auto">
-        <button
-          onClick={() => setScreen("map")}
-          className="text-parchment/40 hover:text-parchment text-sm mb-8 block"
-        >
-          ← Back to map
-        </button>
-        <div className="text-center mb-8">
-          <p
-            dir="rtl"
-            className="text-7xl font-serif text-gold mb-3"
-            style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
-          >
-            {activeWord.hebrew}
-          </p>
-          <p className="text-parchment/60 italic text-lg">{activeWord.transliteration}</p>
+      <div className="min-h-screen bg-ink text-parchment flex items-center justify-center px-6 text-center">
+        <div>
+          <p className="text-parchment/50 mb-4">No conquest words found for Chapter {chapterNumber}.</p>
+          <button onClick={() => navigate("/codex")} className="text-gold text-sm hover:underline">
+            ← Back to Codex
+          </button>
         </div>
-        <div className="space-y-4 mb-8">
-          <div className="border border-parchment/10 rounded-lg p-5">
-            <p className="text-xs text-parchment/40 uppercase tracking-widest mb-1">Root</p>
-            <p className="text-parchment font-serif">{activeWord.root}</p>
-          </div>
-          <div className="border border-parchment/10 rounded-lg p-5">
-            <p className="text-xs text-parchment/40 uppercase tracking-widest mb-1">Primary Meaning</p>
-            <p className="text-parchment font-serif text-lg">{activeWord.primaryMeaning}</p>
-          </div>
-          <div className="border border-parchment/10 rounded-lg p-5">
-            <p className="text-xs text-parchment/40 uppercase tracking-widest mb-1">Also means</p>
-            <p className="text-parchment/70 text-sm">{activeWord.secondaryMeaning}</p>
-          </div>
-          <div className="border border-gold/20 rounded-lg p-5 bg-gold/5">
-            <p className="text-xs text-gold/60 uppercase tracking-widest mb-1">In Genesis</p>
-            <p className="text-parchment/70 text-sm">{activeWord.genesisContext}</p>
-          </div>
-        </div>
-        <div className="mb-8">
-          <p className="text-xs text-parchment/40 uppercase tracking-widest mb-3">Across the Bible</p>
-          <div className="border border-parchment/10 rounded-lg p-5">
-            <p className="text-gold text-xs mb-2">{activeWord.bibleUsages[usageIndex].reference}</p>
-            <p className="text-parchment/70 text-sm italic leading-relaxed">
-              "{activeWord.bibleUsages[usageIndex].text}"
-            </p>
-            <div className="flex gap-2 mt-4">
-              {activeWord.bibleUsages.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setUsageIndex(i)}
-                  className={`h-2 rounded-full transition-all ${
-                    i === usageIndex ? "bg-gold w-5" : "bg-parchment/20 w-2"
-                  }`}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="border border-ember/30 rounded-lg p-5 bg-ember/5 mb-8">
-          <p className="text-xs text-ember/70 uppercase tracking-widest mb-2">Memory Aid</p>
-          <p className="text-parchment/70 text-sm leading-relaxed">{activeWord.memoryAid}</p>
-        </div>
-        <button
-          onClick={completeWord}
-          className="w-full py-4 bg-gold text-ink font-semibold rounded hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
-        >
-          Word Studied · +{activeWord.xp} XP
-        </button>
       </div>
     );
   }
 
-  // Map screen
+  // ── Word study screen ────────────────────────────────────────────────────────
+
+  const progress = mastered.size / words.length;
+
+  const bibleUsageText =
+    currentWord.bibleUsages && currentWord.bibleUsages.length > 0
+      ? currentWord.bibleUsages
+          .map((u: { reference: string; text: string }) => `${u.reference} — "${u.text}"`)
+          .join("\n\n")
+      : `The word "${currentWord.transliteration}" carries deep resonance throughout the Hebrew Bible, appearing in pivotal moments of creation, covenant, and transformation.`;
+
+  const sections = [
+    {
+      key: "root",
+      label: "Root & Family",
+      content: currentWord.root
+        ? `Root: ${currentWord.root}${currentWord.secondaryMeaning ? ` · ${currentWord.secondaryMeaning}` : ""}`
+        : currentWord.primaryMeaning,
+    },
+    {
+      key: "meaning",
+      label: "Primary Meaning",
+      content: currentWord.primaryMeaning,
+    },
+    {
+      key: "usage",
+      label: "How It Appears in This Chapter",
+      content: currentWord.genesisContext,
+    },
+    {
+      key: "scripture",
+      label: "Where Else It Appears in Scripture",
+      content: bibleUsageText,
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-ink px-4 py-8 pb-8 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-2">
+    <div className="min-h-screen bg-ink text-parchment pb-8">
+
+      {/* Animation overlay */}
+      {showAnimation && <MasteredAnimation xp={wordXp} />}
+
+      {/* ── Header ── */}
+      <div className="border-b border-parchment/10 px-5 py-4 flex items-center justify-between">
         <button
           onClick={() => navigate("/codex")}
-          className="text-parchment/40 hover:text-parchment text-sm"
+          className="text-parchment/40 hover:text-parchment text-sm transition-colors"
         >
           ← Codex
         </button>
-        <div className="text-right">
-          <p className="text-gold font-bold">{totalXP} XP</p>
-          <p className="text-parchment/30 text-xs">
-            {studied.size}/{conquestChapter.words.length} words
+        <div className="text-center">
+          <p className="text-parchment/50 text-xs uppercase tracking-widest">
+            Conquest · Chapter {chapterNumber}
           </p>
         </div>
-      </div>
-
-      <div className="text-center mb-10">
-        <p className="text-gold/60 text-xs uppercase tracking-widest mb-1">Conquest Mode</p>
-        <h1 className="text-3xl font-serif text-parchment">
-          Genesis · Chapter {chapterNumber}
-        </h1>
-        <p className="text-gold/50 font-serif italic mt-1">{conquestChapter.title}</p>
-        <p className="text-parchment/40 text-sm mt-2">
-          Study each word to unlock Chapter {chapterNumber + 1}
+        <p className="text-parchment/40 text-xs">
+          {mastered.size}/{words.length}
         </p>
       </div>
 
-      <div className="h-1 bg-parchment/10 rounded-full mb-10 overflow-hidden">
+      {/* ── Progress bar ── */}
+      <div className="h-1 bg-parchment/10">
         <div
-          className="h-full bg-gold rounded-full transition-all duration-500"
-          style={{ width: `${(studied.size / conquestChapter.words.length) * 100}%` }}
+          className="h-full bg-gold transition-all duration-500"
+          style={{ width: `${progress * 100}%` }}
         />
       </div>
 
-      <div className="space-y-4">
-        {conquestChapter.words.map((word, i) => {
-          const done = studied.has(word.id);
-          const locked = i > 0 && !studied.has(conquestChapter.words[i - 1].id);
-          return (
-            <button
-              key={word.id}
-              onClick={() => !locked && openWord(word)}
-              disabled={locked}
-              className={`w-full flex items-center gap-5 p-5 rounded-xl border transition-all text-left
-                ${done
-                  ? "border-gold/40 bg-gold/5"
-                  : locked
-                  ? "border-parchment/5 opacity-40 cursor-not-allowed"
-                  : "border-parchment/20 hover:border-gold/40 hover:bg-slate/10"
-                }`}
-            >
+      {/* ── Word card ── */}
+      <div
+        className={`max-w-xl mx-auto px-5 pt-12 pb-6 transition-opacity duration-300 ${
+          isExiting ? "opacity-0 scale-95" : "opacity-100 scale-100"
+        }`}
+        style={{ transition: "opacity 0.3s ease, transform 0.3s ease" }}
+      >
+        {/* Hebrew word — large and centered */}
+        <div className="text-center mb-10">
+          <p
+            className="text-gold font-hebrew mb-3 leading-none"
+            dir="rtl"
+            style={{
+              fontFamily: "'Frank Ruhl Libre', serif",
+              fontSize: "clamp(60px, 15vw, 96px)",
+            }}
+          >
+            {currentWord.hebrew}
+          </p>
+          <p className="text-parchment/50 text-lg italic tracking-wide">
+            {currentWord.transliteration}
+          </p>
+
+          {/* Word progress dots */}
+          <div className="flex items-center justify-center gap-2 mt-6">
+            {words.map((_, i) => (
               <div
-                className={`w-12 h-12 rounded-full flex items-center justify-center text-2xl font-serif shrink-0
-                  ${done ? "bg-gold text-ink" : "bg-slate/30 text-gold"}`}
-                style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                key={i}
+                className={`rounded-full transition-all duration-300 ${
+                  mastered.has(i)
+                    ? "w-2.5 h-2.5 bg-gold"
+                    : i === currentIndex
+                    ? "w-3 h-3 border-2 border-gold bg-gold/20"
+                    : "w-2 h-2 bg-parchment/15"
+                }`}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* ── 4 accordion sections ── */}
+        <div className="space-y-2 mb-10">
+          {sections.map((sec) => {
+            const isOpen = openSections.has(sec.key);
+            return (
+              <div
+                key={sec.key}
+                className="border border-parchment/10 rounded-xl overflow-hidden"
               >
-                {done ? "✓" : <span dir="rtl">{word.hebrew.split("")[0]}</span>}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p
-                  dir="rtl"
-                  className="text-gold font-serif text-lg"
-                  style={{ fontFamily: "'Frank Ruhl Libre', serif" }}
+                <button
+                  onClick={() => toggleSection(sec.key)}
+                  className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-parchment/5 transition-colors"
                 >
-                  {word.hebrew}
-                </p>
-                <p className="text-parchment/50 text-sm">
-                  {word.transliteration} · {word.primaryMeaning}
-                </p>
+                  <span className="text-parchment/70 text-sm font-medium">{sec.label}</span>
+                  <span className="text-parchment/30 text-lg">{isOpen ? "−" : "+"}</span>
+                </button>
+                {isOpen && (
+                  <div className="px-5 pb-4 border-t border-parchment/10">
+                    <p className="text-parchment/60 text-sm leading-relaxed pt-3">
+                      {sec.content}
+                    </p>
+                  </div>
+                )}
               </div>
-              <div className="text-right shrink-0">
-                <p className={`text-xs font-bold ${done ? "text-gold" : "text-parchment/30"}`}>
-                  {done ? `+${word.xp} XP` : `${word.xp} XP`}
-                </p>
-                {locked && <p className="text-parchment/20 text-xs mt-1">🔒</p>}
-              </div>
-            </button>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {/* ── Mark as Mastered button ── */}
+        <button
+          onClick={handleMasterWord}
+          disabled={showAnimation}
+          className="w-full py-4 bg-gold text-ink font-bold rounded-xl hover:bg-gold-light active:scale-95 disabled:opacity-70 transition-all text-sm uppercase tracking-widest"
+        >
+          {showAnimation ? "✓ Mastered!" : "Mark as Mastered"}
+        </button>
+
+        <p className="text-center text-parchment/20 text-xs mt-3">
+          +{wordXp} XP · {words.length - mastered.size} word{words.length - mastered.size !== 1 ? "s" : ""} remaining
+        </p>
       </div>
     </div>
   );

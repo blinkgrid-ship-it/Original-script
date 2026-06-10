@@ -1,4 +1,10 @@
+import type { ReactNode } from "react";
+
 export interface ConquestWord {
+  meaning: any;
+  usage: any;
+  scriptureRef: string;
+  word: ReactNode;
   id: string;
   hebrew: string;
   transliteration: string;
@@ -37,6 +43,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Rosh Hashanah — the Jewish New Year — uses the same root. Rosh = head. Bereishit = at the head of time.",
         xp: 50,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "bara",
@@ -53,6 +63,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Only God is ever the subject of bara in the entire Bible. Humans make or form — only God bara's.",
         xp: 50,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "elohim",
@@ -69,6 +83,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "El = power. Elohim = the fullness of all power. The plural isn't polytheism — it's the Hebrew way of saying ultimate, complete, beyond category.",
         xp: 60,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "tohu-vavohu",
@@ -85,6 +103,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "It's a rhyming pair — like saying 'helter-skelter'. The sound itself feels chaotic. Tohu vaVohu = the universe's messy starting point.",
         xp: 70,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "ruach",
@@ -101,6 +123,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Ruach is the word that connects God's Spirit, the wind in the trees, and the breath in your lungs. All three are the same Hebrew word.",
         xp: 60,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
     ],
   },
@@ -123,6 +149,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Vaykhulu opens the Shabbat kiddush every Friday night. When you hear it at a Jewish dinner table, you're hearing Genesis 2:1 recited.",
         xp: 50,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "vayishbot",
@@ -139,6 +169,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Shabbat, Sabbath, Sabado (Spanish for Saturday) — all from this root. The day of intentional rest is named after this single divine act in Genesis 2.",
         xp: 60,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "vayekadesh",
@@ -155,6 +189,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Kiddush (Friday night blessing over wine), Kadosh (holy), Kedushah (holiness prayer) — all from kadash. The first holy thing in the Bible is time, not a place.",
         xp: 70,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
     ],
   },
@@ -177,6 +215,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Nachash shares its root with the word for divination — the serpent represents forbidden knowledge from the very start of scripture.",
         xp: 60,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "arum",
@@ -193,6 +235,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "Same word, opposite contexts. In Genesis 3, arum is the serpent's dangerous cunning. In Proverbs, it's admirable wisdom. The quality itself is neutral — its use determines its morality.",
         xp: 60,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
       {
         id: "tov-vara",
@@ -209,6 +255,10 @@ export const conquestChapters: ConquestChapter[] = [
         ],
         memoryAid: "In Hebrew, 'from A to Z' is expressed as 'from aleph to tav.' Similarly, 'good and evil' is a merism — it means the full range of all knowledge, not just moral categories.",
         xp: 70,
+        meaning: undefined,
+        usage: undefined,
+        scriptureRef: "",
+        word: undefined
       },
     ],
   },
