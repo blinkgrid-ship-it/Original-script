@@ -1,16 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { getTodayQuestion, mockAnswers } from "../data/questionData";
+import {
+  fetchTodayQuestion,
+  fetchAnswers,
+  postAnswer,
+  postReply,
+  type ApiQuestion,
+  type ApiAnswer,
+} from "../lib/api";
 import AuthModal from "../component/AuthModal";
 import ProfileCard from "../component/ProfileCard";
-
-// Map mock answer userNames to mock profile userIds for navigation
-const NAME_TO_PROFILE: Record<string, { userId: string; level: string; pathway: string }> = {
-  "Sarah Mathew":   { userId: "user_sarah",  level: "Scholar", pathway: "theology-student" },
-  "Thomas Varghese":{ userId: "user_thomas", level: "Scribe",  pathway: "serious-learner"  },
-  "Priya John":     { userId: "user_priya",  level: "Seeker",  pathway: "wisdom-seeker"    },
-  "George Kurian":  { userId: "user_george", level: "Sage",    pathway: "church-leader"    },
-};
 
 const PATHWAY_COLORS: Record<string, string> = {
   "wisdom-seeker":    "bg-gold/20 text-gold/80",
@@ -28,37 +27,96 @@ const PATHWAY_LABELS: Record<string, string> = {
 
 export default function QuestionPage() {
   const { user } = useAuth();
-  const question = getTodayQuestion();
+
+  // Backend-driven data (replaces the old mock imports).
+  const [question, setQuestion] = useState<ApiQuestion | null>(null);
+  const [answers, setAnswers] = useState<ApiAnswer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [screen, setScreen] = useState<"question" | "feed">("question");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [modelAnswer, setModelAnswer] = useState<string | null>(null);
   const [scriptureOpen, setScriptureOpen] = useState(false);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
-  const [replies, setReplies] = useState<Record<string, string>>({});
   const [showAuth, setShowAuth] = useState(false);
+
+  const loadAnswers = useCallback(async (questionId: string) => {
+    try {
+      setAnswers(await fetchAnswers(questionId));
+    } catch {
+      /* non-fatal: keep whatever we have */
+    }
+  }, []);
+
+  // Load today's question + its answers on mount.
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = await fetchTodayQuestion();
+        setQuestion(q);
+        await loadAnswers(q.id);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Failed to load today's question.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [loadAnswers]);
 
   function requireAuth(then: () => void) {
     if (user) then();
     else setShowAuth(true);
   }
 
-  function handleSubmit() {
-    if (!answer.trim()) return;
-    setSubmitted(true);
-    setScreen("feed");
+  async function handleSubmit() {
+    if (!answer.trim() || !question) return;
+    setError(null);
+    try {
+      const created = await postAnswer(question.id, answer.trim());
+      setModelAnswer(created.modelAnswer ?? null);
+      setSubmitted(true);
+      await loadAnswers(question.id);
+      setScreen("feed");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not submit your answer.");
+    }
   }
 
-  function handleReplySubmit(answerId: string) {
+  async function handleReplySubmit(answerId: string) {
     if (!replyText.trim()) return;
-    setReplies((prev) => ({ ...prev, [answerId]: replyText }));
-    setReplyText("");
-    setReplyingTo(null);
+    setError(null);
+    try {
+      await postReply(answerId, replyText.trim());
+      setReplyText("");
+      setReplyingTo(null);
+      if (question) await loadAnswers(question.id);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not post your reply.");
+    }
   }
 
-  // Total community count = mock answers + 1 if user submitted
-  const communityCount = mockAnswers.length + (submitted ? 1 : 0);
+  const communityCount = answers.length;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ink text-parchment flex items-center justify-center">
+        <p className="text-parchment/40 text-sm">Loading today's question…</p>
+      </div>
+    );
+  }
+
+  if (error && !question) {
+    return (
+      <div className="min-h-screen bg-ink text-parchment flex items-center justify-center px-5">
+        <p className="text-ember/70 text-sm text-center">{error}</p>
+      </div>
+    );
+  }
+
+  if (!question) return null;
 
   return (
     <div className="min-h-screen bg-ink text-parchment pb-10">
@@ -73,7 +131,7 @@ export default function QuestionPage() {
               Question of the Day
             </span>
             <span className="text-parchment/30 text-xs">
-              {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+              {new Date(question.date).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
             </span>
           </div>
 
@@ -96,21 +154,31 @@ export default function QuestionPage() {
           {scriptureOpen && (
             <div className="mb-6 pl-5 border-l border-gold/20">
               <p className="text-parchment/60 text-sm italic leading-relaxed">
-                "{question.scripture.passage}"
+                {question.scripture.passage ? `"${question.scripture.passage}"` : question.scripture.reference}
               </p>
             </div>
           )}
 
           {/* Community count teaser */}
           <p className="text-parchment/30 text-xs mb-4">
-            🕊 {mockAnswers.length} people from your community have answered today
+            🕊 {communityCount} people from your community have answered today
           </p>
+
+          {error && <p className="text-ember/70 text-xs mb-3">{error}</p>}
 
           {/* Answer input or submitted state */}
           {submitted ? (
-            <div className="border border-gold/20 rounded-xl p-5 bg-gold/5 mb-6">
-              <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">Your answer</p>
-              <p className="text-parchment/70 text-sm leading-relaxed italic">"{answer}"</p>
+            <div className="mb-6 space-y-3">
+              <div className="border border-gold/20 rounded-xl p-5 bg-gold/5">
+                <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">Your answer</p>
+                <p className="text-parchment/70 text-sm leading-relaxed italic">"{answer}"</p>
+              </div>
+              {modelAnswer && (
+                <div className="border border-parchment/15 rounded-xl p-5 bg-slate/10">
+                  <p className="text-parchment/40 text-xs uppercase tracking-widest mb-2">From the passage</p>
+                  <p className="text-parchment/60 text-sm leading-relaxed">{modelAnswer}</p>
+                </div>
+              )}
             </div>
           ) : user ? (
             <div className="mb-6">
@@ -146,7 +214,7 @@ export default function QuestionPage() {
             onClick={() => setScreen("feed")}
             className="w-full text-center text-parchment/30 text-sm hover:text-parchment transition-colors py-2"
           >
-            See community reflections ({mockAnswers.length}) →
+            See community reflections ({communityCount}) →
           </button>
         </div>
       )}
@@ -171,28 +239,12 @@ export default function QuestionPage() {
             🕊 <span className="text-parchment/60 font-medium">{communityCount} people</span> answered today
           </p>
 
-          {/* User's own answer at top (if submitted) */}
-          {submitted && (
-            <div className="border border-gold/20 rounded-xl p-5 bg-gold/5 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-7 h-7 rounded-full bg-gold/20 flex items-center justify-center text-xs text-gold font-bold">
-                  {user?.email?.charAt(0).toUpperCase() ?? "?"}
-                </div>
-                <span className="text-parchment/70 text-sm font-medium">You</span>
-                <span className="text-gold/50 text-xs ml-auto">just now</span>
-              </div>
-              <p className="text-parchment/70 text-sm leading-relaxed">{answer}</p>
-            </div>
-          )}
+          {error && <p className="text-ember/70 text-xs mb-3">{error}</p>}
 
           {/* Community answers */}
           <div className="space-y-3">
-            {mockAnswers.map((ans) => {
-              const meta = NAME_TO_PROFILE[ans.userName];
-              const userId = meta?.userId ?? `user_${ans.id}`;
-              const level = meta?.level ?? "Seeker";
-              const pathway = meta?.pathway ?? ans.pathway;
-              const hasReplied = !!replies[ans.id];
+            {answers.map((ans) => {
+              const pathway = ans.pathway;
               const isReplying = replyingTo === ans.id;
 
               return (
@@ -201,32 +253,43 @@ export default function QuestionPage() {
                   {/* Header row: profile card chip + time */}
                   <div className="flex items-center justify-between mb-3">
                     <ProfileCard
-                      userId={userId}
+                      userId={ans.userId}
                       name={ans.userName}
                       pathway={pathway}
-                      level={level}
+                      level="Seeker"
                       compact
                     />
                     <span className="text-parchment/20 text-xs shrink-0 ml-2">{ans.timeAgo}</span>
                   </div>
 
                   {/* Pathway badge */}
-                  <div className="mb-3">
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${PATHWAY_COLORS[pathway] ?? "bg-parchment/10 text-parchment/50"}`}>
-                      {PATHWAY_LABELS[pathway] ?? pathway}
-                    </span>
-                  </div>
+                  {pathway && (
+                    <div className="mb-3">
+                      <span className={`px-2 py-0.5 rounded-full text-xs ${PATHWAY_COLORS[pathway] ?? "bg-parchment/10 text-parchment/50"}`}>
+                        {PATHWAY_LABELS[pathway] ?? pathway}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Answer text */}
                   <p className="text-parchment/70 text-sm leading-relaxed mb-4">{ans.answer}</p>
 
-                  {/* Reply section */}
-                  {hasReplied ? (
-                    <div className="pl-4 border-l border-gold/20">
-                      <p className="text-parchment/40 text-xs uppercase tracking-widest mb-1">Your reply</p>
-                      <p className="text-parchment/60 text-sm italic">"{replies[ans.id]}"</p>
+                  {/* Existing replies */}
+                  {ans.replies.length > 0 && (
+                    <div className="pl-4 border-l border-gold/20 space-y-2 mb-3">
+                      {ans.replies.map((r) => (
+                        <div key={r.id}>
+                          <p className="text-parchment/40 text-xs">
+                            {r.userName} <span className="text-parchment/20">· {r.timeAgo}</span>
+                          </p>
+                          <p className="text-parchment/60 text-sm italic">"{r.text}"</p>
+                        </div>
+                      ))}
                     </div>
-                  ) : isReplying ? (
+                  )}
+
+                  {/* Reply input / button */}
+                  {isReplying ? (
                     <div className="mt-2">
                       <textarea
                         value={replyText}
@@ -262,6 +325,12 @@ export default function QuestionPage() {
                 </div>
               );
             })}
+
+            {answers.length === 0 && (
+              <p className="text-parchment/30 text-sm text-center py-6">
+                No reflections yet — be the first to answer.
+              </p>
+            )}
           </div>
 
           {/* Answer CTA if not yet submitted */}

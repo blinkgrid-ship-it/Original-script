@@ -140,7 +140,6 @@ function ProgressRing({
 
 function ConstellationMap({
   chaptersRead,
-  totalChapters,
 }: {
   chaptersRead: number[];
   totalChapters: number;
