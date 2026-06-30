@@ -103,11 +103,16 @@ export interface VerseData {
 }
 
 // GET an assembled verse + all its commentary jars. Public.
+// Genesis 1:1 is served from static mock data while the backend is not yet hosted.
 export async function fetchVerse(
   book: string,
   chapter: number | string,
   verse: number | string,
 ): Promise<VerseData> {
+  if (book.toLowerCase() === "genesis" && String(chapter) === "1" && String(verse) === "1") {
+    const { default: mock } = await import("../data/gen1mock");
+    return mock;
+  }
   return handle<VerseData>(await fetch(`${API_URL}/api/verse/${book}/${chapter}/${verse}`));
 }
 
