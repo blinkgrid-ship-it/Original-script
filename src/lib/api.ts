@@ -60,6 +60,20 @@ export async function fetchAnswers(questionId: string): Promise<ApiAnswer[]> {
   return handle<ApiAnswer[]>(await fetch(`${API_URL}/api/questions/${questionId}/answers`));
 }
 
+// The current user's own answer to a question (+ the revealed model answer), if any. Auth.
+export interface MyAnswer {
+  answered: boolean;
+  answer?: string;
+  modelAnswer?: string | null;
+}
+export async function fetchMyAnswer(questionId: string): Promise<MyAnswer> {
+  return handle<MyAnswer>(
+    await fetch(`${API_URL}/api/questions/${questionId}/my-answer`, {
+      headers: { ...(await authHeaders()) },
+    }),
+  );
+}
+
 // POST an answer; returns the created answer plus `modelAnswer` (the reveal). Auth.
 export async function postAnswer(
   questionId: string,
@@ -74,6 +88,29 @@ export async function postAnswer(
   );
 }
 
+// ── OSR verse reader (the founder's verse-by-verse vision) ──────────────────────
+export interface VerseData {
+  verseRef: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  osrText: string;
+  hebrewText: string | null;
+  transliteration: string | null;
+  ndh: { code: string | null; confidence: string | null };
+  // jars keyed by jar_type (osr_commentary, word_study, theology, ...); shape varies.
+  jars: Record<string, any>;
+}
+
+// GET an assembled verse + all its commentary jars. Public.
+export async function fetchVerse(
+  book: string,
+  chapter: number | string,
+  verse: number | string,
+): Promise<VerseData> {
+  return handle<VerseData>(await fetch(`${API_URL}/api/verse/${book}/${chapter}/${verse}`));
+}
+
 // POST a reply to an answer. Auth.
 export async function postReply(answerId: string, text: string): Promise<ApiReply> {
   return handle<ApiReply>(
@@ -83,4 +120,33 @@ export async function postReply(answerId: string, text: string): Promise<ApiRepl
       body: JSON.stringify({ text }),
     }),
   );
+}
+
+// POST the signed-in user's onboarding pathway. Auth.
+export async function postPathway(pathway: string): Promise<{ success: boolean; pathway: string }> {
+  return handle(
+    await fetch(`${API_URL}/api/me/pathway`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ pathway }),
+    }),
+  );
+}
+
+// A user's public profile (shape matches src/data/communityData.ts PublicProfile).
+export interface ApiProfile {
+  userId: string;
+  name: string;
+  pathway: string | null;
+  level: string;
+  xp: number;
+  streak: number;
+  wordsMastered: number;
+  totalAnswers: number;
+  chaptersRead: number[];
+  conquestDone: number[];
+  recentAnswers: { question: string; answer: string; date: string }[];
+}
+export async function fetchProfile(userId: string): Promise<ApiProfile> {
+  return handle<ApiProfile>(await fetch(`${API_URL}/api/user/${userId}/profile`));
 }

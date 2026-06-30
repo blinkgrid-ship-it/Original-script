@@ -1,27 +1,11 @@
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { getMockProfile, type PublicProfile } from "../data/communityData";
+import { fetchProfile, type ApiProfile } from "../lib/api";
 
-// ── localStorage helpers (for current user's real data) ──────────────────────
-
-function getCodexRead(): number[] {
-  return JSON.parse(localStorage.getItem("os_codex_read") ?? "[]");
-}
-function getConquestDone(): number[] {
-  return JSON.parse(localStorage.getItem("os_conquest_done") ?? "[]");
-}
-function getPathway(): string {
-  return localStorage.getItem("os_pathway") ?? "wisdom-seeker";
-}
-
-const WORDS_PER_CHAPTER: Record<number, number> = { 1: 5, 2: 3, 3: 3 };
 const TOTAL_CHAPTERS = 3;
 const TOTAL_WORDS = 11;
-
-function getWordsMastered(conquestDone: number[]): number {
-  return conquestDone.reduce((sum, ch) => sum + (WORDS_PER_CHAPTER[ch] ?? 0), 0);
-}
 
 const LEVEL_COLORS: Record<string, string> = {
   Seeker: "text-parchment/60",
@@ -140,39 +124,40 @@ export default function PublicProfilePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Determine if this is the current user's own profile
-  const isOwnProfile = user && userId === user.id;
+  const [profile, setProfile] = useState<ApiProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Build profile data: own profile uses localStorage, others use mock
-  let profile: PublicProfile;
+  const isOwnProfile = !!user && userId === user.id;
 
-  if (isOwnProfile) {
-    const chaptersRead = getCodexRead();
-    const conquestDone = getConquestDone();
-    const wordsMastered = getWordsMastered(conquestDone);
-    const xp = chaptersRead.length * 100 + wordsMastered * 25;
-    const level =
-      xp >= 600 ? "Sage" : xp >= 300 ? "Scribe" : xp >= 100 ? "Scholar" : "Seeker";
+  // Fetch the public profile from the backend (same shape for own + others).
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        setProfile(await fetchProfile(userId));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Profile not found.");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [userId]);
 
-    profile = {
-      userId: user!.id,
-      name: user!.email?.split("@")[0] ?? "You",
-      pathway: getPathway(),
-      level,
-      xp,
-      streak: 3, // from mock — real value from Sarthak's streak endpoint
-      wordsMastered,
-      totalAnswers: 15,
-      chaptersRead,
-      conquestDone,
-      recentAnswers: [
-        { question: "What does Genesis 1:2 reveal about God before creation?", answer: "The Spirit hovering suggests active intention — not passive observation.", date: "2026-06-08" },
-        { question: "Why does darkness precede light in the creation account?", answer: "I think chaos was necessary. Order means nothing without something to overcome.", date: "2026-06-07" },
-        { question: "What is the significance of bara in Genesis?", answer: "The Hebrew word bara implies cutting — God carved existence from nothingness.", date: "2026-06-06" },
-      ],
-    };
-  } else {
-    profile = getMockProfile(userId ?? "unknown");
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-ink text-parchment flex items-center justify-center">
+        <p className="text-parchment/40 text-sm">Loading profile…</p>
+      </div>
+    );
+  }
+  if (error || !profile) {
+    return (
+      <div className="min-h-screen bg-ink text-parchment flex flex-col items-center justify-center gap-4 px-5">
+        <p className="text-parchment/50 text-sm">{error ?? "Profile not found."}</p>
+        <button onClick={() => navigate(-1)} className="text-gold/70 text-sm hover:text-gold">← Back</button>
+      </div>
+    );
   }
 
   const wordsMastered = profile.wordsMastered;
@@ -215,7 +200,7 @@ export default function PublicProfilePage() {
           <div className="flex-1 text-center sm:text-left">
             <h1 className="text-parchment font-serif text-2xl mb-1">{profile.name}</h1>
             <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-4">
-              ✦ {PATHWAY_LABELS[profile.pathway] ?? profile.pathway}
+              ✦ {PATHWAY_LABELS[profile.pathway ?? ""] ?? profile.pathway ?? "Seeker"}
             </div>
 
             {/* XP bar */}

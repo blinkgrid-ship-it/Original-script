@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import {
   fetchTodayQuestion,
   fetchAnswers,
+  fetchMyAnswer,
   postAnswer,
   postReply,
   type ApiQuestion,
@@ -65,6 +66,26 @@ export default function QuestionPage() {
       }
     })();
   }, [loadAnswers]);
+
+  // If the signed-in user has already answered today's question, show their saved
+  // answer + the revealed model answer on load (instead of an empty input box).
+  useEffect(() => {
+    if (!user || !question) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const mine = await fetchMyAnswer(question.id);
+        if (!cancelled && mine.answered) {
+          setAnswer(mine.answer ?? "");
+          setModelAnswer(mine.modelAnswer ?? null);
+          setSubmitted(true);
+        }
+      } catch {
+        /* ignore — fall back to the input */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user, question]);
 
   function requireAuth(then: () => void) {
     if (user) then();
@@ -240,6 +261,22 @@ export default function QuestionPage() {
           </p>
 
           {error && <p className="text-ember/70 text-xs mb-3">{error}</p>}
+
+          {/* Your answer + the passage reveal (once you've answered) */}
+          {submitted && (
+            <div className="mb-4 space-y-3">
+              <div className="border border-gold/20 rounded-xl p-5 bg-gold/5">
+                <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">Your answer</p>
+                <p className="text-parchment/70 text-sm leading-relaxed italic">"{answer}"</p>
+              </div>
+              {modelAnswer && (
+                <div className="border border-parchment/15 rounded-xl p-5 bg-slate/10">
+                  <p className="text-parchment/40 text-xs uppercase tracking-widest mb-2">From the passage</p>
+                  <p className="text-parchment/60 text-sm leading-relaxed">{modelAnswer}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Community answers */}
           <div className="space-y-3">

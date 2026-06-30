@@ -1,0 +1,232 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { fetchVerse, type VerseData } from "../lib/api";
+
+// ── NDH source metadata (Documentary Hypothesis) ────────────────────────────────
+const NDH: Record<string, { name: string; era: string; colour: string }> = {
+  P: { name: "Priestly Source", era: "~538–450 BCE · Babylonian exile", colour: "#0d6e76" },
+  J: { name: "Yahwist Source", era: "~950–850 BCE · Judah", colour: "#BA7517" },
+  E: { name: "Elohist Source", era: "~850–750 BCE · Northern Israel", colour: "#378ADD" },
+  D: { name: "Deuteronomist", era: "~621 BCE · Jerusalem", colour: "#534AB7" },
+  R: { name: "Redactor", era: "~400 BCE · the final editor", colour: "#8B5F2B" },
+};
+function ndhMeta(code: string | null) {
+  if (!code) return null;
+  return NDH[code] ?? { name: code, era: "mixed source", colour: "#8B5F2B" };
+}
+
+// ── Divine-name colouring (the heart of the OSR translation) ────────────────────
+function escapeHtml(s: string) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+// SAFE — only use with OSR database content, never user input.
+function colourDivineNames(text: string): string {
+  let t = escapeHtml(text);
+  t = t.replace(/יהוה/g, '<span style="color:#EF9F27">יהוה</span>');
+  t = t.replace(/\bElohim\b/g, '<span style="color:#AFA9EC">Elohim</span>');
+  t = t.replace(/\bYeshua\b/g, '<span style="color:#1D9E75">Yeshua</span>');
+  t = t.replace(/\bRuach\b/g, '<span style="color:#9985c4">Ruach</span>');
+  return t;
+}
+function DivineText({ text, style }: { text: string; style?: React.CSSProperties }) {
+  return <span style={style} dangerouslySetInnerHTML={{ __html: colourDivineNames(text) }} />;
+}
+
+// ── small presentational helpers ────────────────────────────────────────────────
+const card: React.CSSProperties = { borderRadius: 14, padding: "1.75rem", marginBottom: "1rem" };
+const jarLabel: React.CSSProperties = {
+  fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: "0.9rem",
+};
+
+function Paragraphs({ text, color }: { text: string; color: string }) {
+  return (
+    <>
+      {text.split("\n\n").map((p, i) => (
+        <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, lineHeight: 2, color, marginBottom: "1rem" }}>
+          <DivineText text={p} />
+        </p>
+      ))}
+    </>
+  );
+}
+
+export default function VerseReaderPage() {
+  const { book = "genesis", chapter = "1", verse = "1" } = useParams();
+  const navigate = useNavigate();
+  const [data, setData] = useState<VerseData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+    fetchVerse(book, chapter, verse)
+      .then(setData)
+      .catch((e) => setError(e instanceof Error ? e.message : "Verse not found."))
+      .finally(() => setLoading(false));
+  }, [book, chapter, verse]);
+
+  if (loading) {
+    return <div style={{ minHeight: "100vh", background: "#07040f", color: "#9985c4", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading verse…</div>;
+  }
+  if (error || !data) {
+    return (
+      <div style={{ minHeight: "100vh", background: "#07040f", color: "#9985c4", display: "flex", flexDirection: "column", gap: 16, alignItems: "center", justifyContent: "center" }}>
+        <p>{error ?? "Verse not found."}</p>
+        <button onClick={() => navigate("/codex")} style={{ color: "#C9A84C", background: "none", border: "1px solid rgba(201,168,76,0.4)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}>← Back to Codex</button>
+      </div>
+    );
+  }
+
+  const src = ndhMeta(data.ndh.code);
+  const j = data.jars;
+  const vNum = data.verse;
+
+  return (
+    <div style={{ minHeight: "100vh", background: "#07040f", color: "#f0ead8", paddingBottom: "4rem" }}>
+      {/* Hero — night sky */}
+      <div style={{ background: "radial-gradient(circle at 30% 20%, #160d2e, #07040f 70%)", padding: "2.5rem 1.25rem 3rem" }}>
+        <div style={{ maxWidth: 680, margin: "0 auto" }}>
+          <button onClick={() => navigate("/codex")} style={{ color: "#9985c4", background: "none", border: "none", cursor: "pointer", fontSize: 12, marginBottom: "1.5rem" }}>← Codex</button>
+
+          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C9A84C", marginBottom: "1rem" }}>
+            {data.book} · Chapter {data.chapter} · Verse {vNum}
+          </div>
+
+          {/* NDH source tag */}
+          {src && (
+            <div style={{ display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: "1.5rem", background: `${src.colour}26`, color: src.colour, border: `1px solid ${src.colour}80` }}>
+              {data.ndh.code} · {src.name} · {src.era}
+              {data.ndh.confidence && data.ndh.confidence !== "consensus" ? ` · ${data.ndh.confidence}` : ""}
+            </div>
+          )}
+
+          {/* OSR verse line */}
+          <p style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", lineHeight: 1.9, color: "#f0ead8", borderLeft: `2px solid ${src?.colour ?? "#C9A84C"}`, paddingLeft: "1.1rem" }}>
+            <DivineText text={data.osrText} />
+          </p>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "1.5rem 1.25rem 0" }}>
+
+        {/* OSR Commentary — cinematic scene + scholar's conclusion */}
+        {j.osr_commentary && (
+          <>
+            <div style={{ ...card, background: "#0f0b1e", border: "1px solid rgba(83,74,183,0.25)" }}>
+              <div style={{ ...jarLabel, color: "#9985c4" }}>✦ Cinematic Scene</div>
+              <Paragraphs text={j.osr_commentary.cinematic_scene} color="#ddd5f0" />
+            </div>
+            <div style={{ ...card, background: "#fffef9", border: "1px solid #e0d8c8" }}>
+              <div style={{ ...jarLabel, color: "#888" }}>Scholar’s Conclusion</div>
+              {j.osr_commentary.scholars_conclusion.split("\n\n").map((p: string, i: number) => (
+                <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, fontStyle: "italic", lineHeight: 2, color: "#1a1209", marginBottom: "1rem" }}>
+                  <DivineText text={p} />
+                </p>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Theology — prevailing verse */}
+        {j.theology && (
+          <div style={{ ...card, background: "#0f0b1e", border: "1px solid rgba(83,74,183,0.25)" }}>
+            <div style={{ ...jarLabel, color: "#9985c4" }}>Theology — God-concept vs. Yeshua’s standard</div>
+            <p style={{ fontSize: 14, lineHeight: 1.9, color: "#ddd5f0", marginBottom: "0.75rem" }}>{j.theology.god_concept}</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.9, color: "#b6abd6", marginBottom: "1.25rem" }}>{j.theology.film_assessment}</p>
+            {j.theology.prevailing_verse_ref && (
+              <div style={{ background: "#051409", borderRadius: 12, padding: "1.25rem", border: "1px solid rgba(29,158,117,0.35)" }}>
+                <div style={{ ...jarLabel, color: "#1D9E75" }}>The prevailing word — {j.theology.prevailing_verse_ref}</div>
+                <p style={{ fontFamily: "Georgia, serif", fontSize: 14.5, fontStyle: "italic", color: "#b8e0d0", lineHeight: 1.95, marginBottom: "0.5rem" }}>
+                  <DivineText text={`"${j.theology.prevailing_verse_text}"`} />
+                </p>
+                <p style={{ fontSize: 12.5, color: "#7fb39c", lineHeight: 1.7 }}>{j.theology.prevailing_note}</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Word study */}
+        {j.word_study?.words?.length > 0 && (
+          <div style={{ ...card, background: "#fffef9", border: "1px solid #e0d8c8" }}>
+            <div style={{ ...jarLabel, color: "#888" }}>Word Study</div>
+            {j.word_study.words.map((w: any, i: number) => (
+              <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: i < j.word_study.words.length - 1 ? "1px solid #efe9dc" : "none" }}>
+                <div style={{ minWidth: 64, fontFamily: "Georgia, serif", fontSize: "1.3rem", color: "#534AB7", direction: "rtl", textAlign: "right" }}>{w.hebrew}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 10, fontStyle: "italic", color: "#888" }}>{w.transliteration}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1209", marginBottom: 4 }}>{w.meaning}</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.7, color: "#3a3020" }}>{w.note}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Writing timeline */}
+        {j.writing_timeline && (
+          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+            <div style={{ ...jarLabel, color: "#C9A84C" }}>When &amp; why it was written</div>
+            <Detail k="Period" v={j.writing_timeline.writing_period} />
+            <Detail k="Source" v={j.writing_timeline.ndh_source_full} />
+            <Detail k="Where" v={j.writing_timeline.writing_location} />
+            <Detail k="Context" v={j.writing_timeline.writing_context} />
+            <Detail k="The writer’s God" v={j.writing_timeline.writers_god_concept} />
+            <Detail k="Unspoken motive" v={j.writing_timeline.unspoken_motive} accent />
+          </div>
+        )}
+
+        {/* Event timeline */}
+        {j.event_timeline && (
+          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+            <div style={{ ...jarLabel, color: "#C9A84C" }}>When the events happened</div>
+            <Detail k="Period" v={j.event_timeline.event_period} />
+            <Detail k="World" v={j.event_timeline.event_world} />
+            <Detail k="God-concept then" v={j.event_timeline.god_concept_then} />
+          </div>
+        )}
+
+        {/* Science */}
+        {j.science && (
+          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+            <div style={{ ...jarLabel, color: "#378ADD" }}>Science layer{typeof j.science.alignment_score === "number" ? ` · alignment ${j.science.alignment_score}/10` : ""}</div>
+            <Detail k="Ancient cosmology" v={j.science.ancient_cosmology} />
+            <Detail k="Honest bridge" v={j.science.honest_bridge} />
+          </div>
+        )}
+
+        {/* No jars yet */}
+        {Object.keys(j).length === 0 && (
+          <div style={{ ...card, background: "#0f0b1e", border: "1px dashed rgba(153,133,196,0.3)", textAlign: "center" }}>
+            <p style={{ color: "#9985c4", fontSize: 13.5 }}>Deep commentary for this verse is coming soon.</p>
+            <p style={{ color: "#6a5f86", fontSize: 11.5, marginTop: 6 }}>(Sample commentary is currently authored for Genesis 1:1.)</p>
+          </div>
+        )}
+
+        {/* Verse navigation */}
+        <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1.5rem" }}>
+          <button disabled={vNum <= 1} onClick={() => navigate(`/codex/${book}/${chapter}/${vNum - 1}`)} style={navBtn(vNum <= 1)}>← Verse {vNum - 1}</button>
+          <button onClick={() => navigate(`/codex/${book}/${chapter}/${vNum + 1}`)} style={navBtn(false)}>Verse {vNum + 1} →</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Detail({ k, v, accent }: { k: string; v?: string; accent?: boolean }) {
+  if (!v) return null;
+  return (
+    <div style={{ marginBottom: "0.85rem" }}>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: accent ? "#C9A84C" : "#7a7088", marginBottom: 3 }}>{k}</div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.8, color: accent ? "#e7d6a8" : "#cfc7dc" }}>{v}</div>
+    </div>
+  );
+}
+
+function navBtn(disabled: boolean): React.CSSProperties {
+  return {
+    fontSize: 12, color: disabled ? "#3a3450" : "#9985c4", background: "none",
+    border: `1px solid ${disabled ? "#221c33" : "rgba(153,133,196,0.4)"}`, borderRadius: 20,
+    padding: "6px 14px", cursor: disabled ? "default" : "pointer",
+  };
+}

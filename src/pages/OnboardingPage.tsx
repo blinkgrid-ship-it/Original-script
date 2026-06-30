@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pathways } from "../data/onboardingData";
+import { postPathway } from "../lib/api";
 
 type Screen = "welcome" | "pathway";
 
@@ -9,9 +10,16 @@ export default function OnboardingPage() {
   const [screen, setScreen] = useState<Screen>("welcome");
   const [selectedPathway, setSelectedPathway] = useState<string | null>(null);
 
-  function handlePathwaySelect(pathwayId: string) {
+  async function handlePathwaySelect(pathwayId: string) {
     setSelectedPathway(pathwayId);
     localStorage.setItem("os_pathway", pathwayId);
+    // Persist to the backend too (best-effort: needs the user signed in; localStorage
+    // keeps the choice if the call fails so onboarding never blocks).
+    try {
+      await postPathway(pathwayId);
+    } catch {
+      /* not signed in / offline — fall back to localStorage */
+    }
     navigate("/home");
   }
 

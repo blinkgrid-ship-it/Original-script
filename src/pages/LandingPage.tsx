@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { getTodayQuestion, mockAnswers } from "../data/questionData";
+import { fetchTodayQuestion, fetchAnswers, type ApiQuestion, type ApiAnswer } from "../lib/api";
 import AuthModal from "../component/AuthModal";
 const mockArtifact = {
   period: "Mesopotamian Period · c. 2217–2193 BCE",
@@ -24,8 +24,22 @@ export default function LandingPage() {
   const [showAuth, setShowAuth] = useState(false);
   const [scriptureOpen, setScriptureOpen] = useState(false);
 
-  const question = getTodayQuestion();
-  const previewAnswers = mockAnswers.slice(0, 2);
+  const [question, setQuestion] = useState<ApiQuestion | null>(null);
+  const [answers, setAnswers] = useState<ApiAnswer[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const q = await fetchTodayQuestion();
+        setQuestion(q);
+        setAnswers(await fetchAnswers(q.id));
+      } catch {
+        /* leave the QotD teaser empty if the API is unreachable */
+      }
+    })();
+  }, []);
+
+  const previewAnswers = answers.slice(0, 2);
 
   function requireAuth(then: () => void) {
     if (user) then();
@@ -94,7 +108,7 @@ export default function LandingPage() {
                 </span>
               </div>
               <p className="text-parchment font-serif text-2xl leading-relaxed mb-6">
-                {question.text}
+                {question?.text ?? "Loading today's question…"}
               </p>
               <button
                 onClick={() => setScriptureOpen(!scriptureOpen)}
@@ -102,7 +116,7 @@ export default function LandingPage() {
               >
                 <span className="w-0.5 h-6 bg-gold/40 rounded-full" />
                 <span className="text-gold/70 text-sm italic font-serif">
-                  {question.scripture.reference}
+                  {question?.scripture.reference}
                 </span>
                 <span className="text-parchment/30 text-xs ml-auto">
                   {scriptureOpen ? "hide" : "read passage"}
@@ -111,16 +125,16 @@ export default function LandingPage() {
               {scriptureOpen && (
                 <div className="mt-4 pl-5 border-l border-gold/20">
                   <p className="text-parchment/60 text-sm italic leading-relaxed">
-                    "{question.scripture.passage}"
+                    {question?.scripture.passage ? `"${question.scripture.passage}"` : question?.scripture.reference}
                   </p>
                 </div>
               )}
             </div>
             <div className="px-6 py-5 border-t border-parchment/10 flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3 text-xs text-parchment/30">
-                <span>{mockAnswers.length} reflections shared</span>
+                <span>{answers.length} reflections shared</span>
                 <span>·</span>
-                <span>{question.scripture.reference}</span>
+                <span>{question?.scripture.reference}</span>
               </div>
               {user ? (
                 <button

@@ -5,6 +5,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import LandingPage from "./pages/LandingPage";
 import QuestionPage from "./pages/QuestionPage";
 import CodexPage from "./pages/CodexPage";
+import VerseReaderPage from "./pages/VerseReaderPage";
 import ConquestPage from "./pages/ConquestPage";
 import ProfilePage from "./pages/ProfilePage";
 import PublicProfilePage from "./pages/PublicProfilePage";
@@ -22,6 +23,7 @@ function AppRoutes() {
         <Route path="/home" element={<LandingPage />} />
         <Route path="/question" element={<QuestionPage />} />
         <Route path="/codex" element={<CodexPage />} />
+        <Route path="/codex/:book/:chapter/:verse" element={<VerseReaderPage />} />
         <Route path="/conquest" element={<ConquestPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/community/:userId" element={<PublicProfilePage />} />

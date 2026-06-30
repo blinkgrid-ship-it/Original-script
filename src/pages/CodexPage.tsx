@@ -353,6 +353,20 @@ export default function CodexPage() {
 
             {/* Verses */}
             <div className="px-6 py-8 max-w-3xl space-y-6">
+              {/* Deep OSR reader entry */}
+              <button
+                onClick={() => navigate(`/codex/genesis/${chapter.number}/1`)}
+                className="w-full text-left rounded-2xl p-5 border border-gold/30 bg-gradient-to-br from-[#160d2e] to-[#07040f] hover:border-gold/60 transition-all group"
+              >
+                <p className="text-gold text-xs uppercase tracking-widest mb-1">✦ OriginalScript · Deep Read</p>
+                <p className="text-parchment font-serif text-lg group-hover:text-gold transition-colors">
+                  Read Genesis {chapter.number} verse-by-verse →
+                </p>
+                <p className="text-parchment/40 text-xs mt-1">
+                  The OSR translation with source layer, cinematic scene, word study &amp; scholar's conclusion.
+                </p>
+              </button>
+
               {chapter.verses.map((verse) => {
                 const key = `${chapter.number}-${verse.number}`;
                 const isExpOpen = openExplanations.has(key);
