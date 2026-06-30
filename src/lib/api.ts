@@ -50,14 +50,17 @@ async function handle<T>(res: Response): Promise<T> {
 }
 
 // GET today's question (optionally segmented by pathway). Public.
-export async function fetchTodayQuestion(pathway?: string): Promise<ApiQuestion> {
-  const qs = pathway ? `?pathway=${encodeURIComponent(pathway)}` : "";
-  return handle<ApiQuestion>(await fetch(`${API_URL}/api/questions/today${qs}`));
+// Returns static mock data while the backend is not yet hosted.
+export async function fetchTodayQuestion(_pathway?: string): Promise<ApiQuestion> {
+  const { mockQuestion } = await import("../data/qotdMock");
+  return mockQuestion;
 }
 
 // GET all answers (with nested replies) for a question. Public.
-export async function fetchAnswers(questionId: string): Promise<ApiAnswer[]> {
-  return handle<ApiAnswer[]>(await fetch(`${API_URL}/api/questions/${questionId}/answers`));
+// Returns static mock answers while the backend is not yet hosted.
+export async function fetchAnswers(_questionId: string): Promise<ApiAnswer[]> {
+  const { mockAnswers } = await import("../data/qotdMock");
+  return mockAnswers;
 }
 
 // The current user's own answer to a question (+ the revealed model answer), if any. Auth.
@@ -66,26 +69,28 @@ export interface MyAnswer {
   answer?: string;
   modelAnswer?: string | null;
 }
-export async function fetchMyAnswer(questionId: string): Promise<MyAnswer> {
-  return handle<MyAnswer>(
-    await fetch(`${API_URL}/api/questions/${questionId}/my-answer`, {
-      headers: { ...(await authHeaders()) },
-    }),
-  );
+export async function fetchMyAnswer(_questionId: string): Promise<MyAnswer> {
+  return { answered: false };
 }
 
 // POST an answer; returns the created answer plus `modelAnswer` (the reveal). Auth.
+// Returns a mock response while the backend is not yet hosted.
 export async function postAnswer(
   questionId: string,
   answer: string,
 ): Promise<ApiAnswer & { modelAnswer: string | null }> {
-  return handle(
-    await fetch(`${API_URL}/api/questions/${questionId}/answers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-      body: JSON.stringify({ answer }),
-    }),
-  );
+  const { mockQuestion } = await import("../data/qotdMock");
+  return {
+    id: "mock-ans-new",
+    questionId,
+    userId: "mock-user-me",
+    userName: "You",
+    pathway: "",
+    answer,
+    timeAgo: "just now",
+    replies: [],
+    modelAnswer: mockQuestion.scripture.passage,
+  };
 }
 
 // ── OSR verse reader (the founder's verse-by-verse vision) ──────────────────────
