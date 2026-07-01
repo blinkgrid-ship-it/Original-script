@@ -353,6 +353,20 @@ export default function CodexPage() {
 
             {/* Verses */}
             <div className="px-6 py-8 max-w-3xl space-y-6">
+              {/* Eastern Theology University — academic bilingual reader entry */}
+              <button
+                onClick={() => navigate("/etu")}
+                className="w-full text-left rounded-2xl p-5 border border-emerald-700/40 bg-gradient-to-br from-emerald-900/20 to-transparent hover:border-emerald-600/70 transition-all group"
+              >
+                <p className="text-emerald-400/80 text-xs uppercase tracking-widest mb-1">🎓 Eastern Theology University</p>
+                <p className="text-parchment font-serif text-lg group-hover:text-emerald-300 transition-colors">
+                  Open the full ISR Bible — English &amp; Malayalam →
+                </p>
+                <p className="text-parchment/40 text-xs mt-1">
+                  All 66 books, side-by-side translation, academic study reader.
+                </p>
+              </button>
+
               {/* Deep OSR reader entry */}
               <button
                 onClick={() => navigate(`/codex/genesis/${chapter.number}/1`)}
