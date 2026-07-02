@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { genesisETU } from "../data/etuGenesis";
 
@@ -235,8 +236,18 @@ export default function ETUReaderPage() {
                 <section key={v.number} id={`v-${v.number}`}
                   style={{ scrollSnapAlign: "start", minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "clamp(2rem, 8vh, 6rem) clamp(1.5rem, 8vw, 6rem)", position: "relative" }}>
                   {/* Big faint verse number watermark */}
-                  <span style={{ position: "absolute", top: "clamp(1rem, 6vh, 4rem)", fontFamily: HEAD, fontSize: "clamp(5rem, 18vw, 11rem)", fontWeight: 700, color: highlighted ? "rgba(176,137,72,0.28)" : "rgba(29,107,95,0.09)", lineHeight: 1, transition: "color 0.5s", pointerEvents: "none", userSelect: "none" }}>{v.number}</span>
-                  <div style={{ maxWidth: 720, position: "relative", zIndex: 1 }}>
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ root: mainRef, amount: 0.5 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    style={{ position: "absolute", top: "clamp(1rem, 6vh, 4rem)", fontFamily: HEAD, fontSize: "clamp(5rem, 18vw, 11rem)", fontWeight: 700, color: highlighted ? "rgba(176,137,72,0.28)" : "rgba(29,107,95,0.09)", lineHeight: 1, transition: "color 0.5s", pointerEvents: "none", userSelect: "none" }}>{v.number}</motion.span>
+                  <motion.div
+                    initial={{ opacity: 0, y: 28 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ root: mainRef, amount: 0.55 }}
+                    transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                    style={{ maxWidth: 720, position: "relative", zIndex: 1 }}>
                     <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
                     {lang !== "ml" && (
                       <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>{v.english}</p>
@@ -248,7 +259,7 @@ export default function ETUReaderPage() {
                           ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
                           : null
                     )}
-                  </div>
+                  </motion.div>
                 </section>
               );
             })}
