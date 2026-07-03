@@ -131,63 +131,60 @@ export default function LandingPage() {
             With the depth it was meant to carry.
           </motion.p>
 
-          {/* Question of the Day — the hook, elevated off the dark */}
+          {/* Split hero: question left, living community right */}
           <motion.div
             variants={heroRise}
-            className="relative rounded-[26px] border border-gold/15 bg-slate/10 px-7 pt-8 pb-7 sm:px-10 sm:pt-10 sm:pb-8 text-left max-w-2xl mx-auto"
-            style={{
-              boxShadow:
-                "0 1px 0 rgba(212,175,90,0.08) inset, 0 40px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,90,0.04)",
-            }}
+            className="grid lg:grid-cols-[1.2fr_0.8fr] gap-5 text-left max-w-5xl mx-auto items-stretch"
           >
-            <div className="flex items-center gap-3 mb-5 flex-wrap">
-              <span className="px-3 py-1 rounded-full bg-gold/15 text-gold text-[11px] tracking-wider uppercase">
-                ✦ Question of the Day
-              </span>
-              <span className="text-parchment/30 text-xs">
-                {new Date().toLocaleDateString("en-US", {
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
-            </div>
-
-            <p className="font-serif text-parchment text-[1.35rem] sm:text-[1.6rem] leading-[1.38] tracking-[-0.015em] mb-6">
-              {question?.text ?? "Loading today's question…"}
-            </p>
-
-            <button
-              onClick={() => setScriptureOpen(!scriptureOpen)}
-              className="flex items-center gap-3 text-left w-full mb-6 group"
+            {/* Question of the Day — the hook, elevated off the dark */}
+            <div
+              className="relative rounded-[26px] border border-gold/15 bg-slate/10 px-7 pt-8 pb-7 sm:px-9 sm:pt-9 flex flex-col"
+              style={{
+                boxShadow:
+                  "0 1px 0 rgba(212,175,90,0.08) inset, 0 40px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,90,0.04)",
+              }}
             >
-              <span className="w-0.5 h-6 bg-gold/40 rounded-full flex-shrink-0" />
-              <span className="text-gold/70 text-sm italic font-serif group-hover:text-gold transition-colors">
-                {question?.scripture.reference}
-              </span>
-              <span className="text-parchment/30 text-xs ml-auto">
-                {scriptureOpen ? "hide" : "read passage"}
-              </span>
-            </button>
-            {scriptureOpen && (
-              <div className="-mt-3 mb-6 pl-5 border-l border-gold/20">
-                <p className="text-parchment/60 text-sm italic leading-relaxed">
-                  {question?.scripture.passage ? `"${question.scripture.passage}"` : question?.scripture.reference}
-                </p>
+              <div className="flex items-center gap-3 mb-5 flex-wrap">
+                <span className="px-3 py-1 rounded-full bg-gold/15 text-gold text-[11px] tracking-wider uppercase">
+                  ✦ Question of the Day
+                </span>
+                <span className="text-parchment/30 text-xs">
+                  {new Date().toLocaleDateString("en-US", {
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </span>
               </div>
-            )}
 
-            <div className="flex items-center justify-between flex-wrap gap-4 pt-5 border-t border-parchment/[0.08]">
-              <span className="text-parchment/30 text-xs">
-                {answers.length} reflections shared today
-              </span>
-              <div className="flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => navigate("/codex")}
-                  className="px-5 py-3 border border-gold/25 text-gold/80 text-xs font-semibold rounded-xl hover:border-gold hover:text-gold hover:-translate-y-0.5 active:translate-y-0 transition-transform uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-                >
-                  Open the Codex
-                </button>
+              <p className="font-serif text-parchment text-[1.35rem] sm:text-[1.55rem] leading-[1.38] tracking-[-0.015em] mb-6">
+                {question?.text ?? "Loading today's question…"}
+              </p>
+
+              <button
+                onClick={() => setScriptureOpen(!scriptureOpen)}
+                className="flex items-center gap-3 text-left w-full mb-5 group"
+              >
+                <span className="w-0.5 h-6 bg-gold/40 rounded-full flex-shrink-0" />
+                <span className="text-gold/70 text-sm italic font-serif group-hover:text-gold transition-colors">
+                  {question?.scripture.reference}
+                </span>
+                <span className="text-parchment/30 text-xs ml-auto">
+                  {scriptureOpen ? "hide" : "read passage"}
+                </span>
+              </button>
+              {scriptureOpen && (
+                <div className="-mt-2 mb-5 pl-5 border-l border-gold/20">
+                  <p className="text-parchment/60 text-sm italic leading-relaxed">
+                    {question?.scripture.passage ? `"${question.scripture.passage}"` : question?.scripture.reference}
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between flex-wrap gap-4 pt-5 mt-auto border-t border-parchment/[0.08]">
+                <span className="text-parchment/30 text-xs">
+                  {answers.length} reflections shared today
+                </span>
                 <button
                   onClick={() => requireAuth(() => navigate("/question"))}
                   className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-xs uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
@@ -197,25 +194,34 @@ export default function LandingPage() {
                 </button>
               </div>
             </div>
-          </motion.div>
 
-          {/* Social proof — quiet, under the card */}
-          {previewAnswers.length > 0 && (
-            <motion.div variants={heroRise} className="mt-6 grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
-              {previewAnswers.map((ans) => (
-                <div key={ans.id} className="border border-parchment/[0.08] rounded-xl p-4 bg-slate/[0.06]">
-                  <div className="flex items-center gap-2 mb-2.5">
-                    <div className="w-6 h-6 rounded-full bg-slate/50 flex items-center justify-center text-[10px] text-gold font-bold flex-shrink-0">
-                      {ans.userName.charAt(0)}
+            {/* Community rail — what people are saying, right now */}
+            <div className="rounded-[26px] border border-parchment/10 bg-slate/[0.07] px-6 pt-7 pb-6 flex flex-col">
+              <p className="text-parchment/40 text-[11px] uppercase tracking-[0.18em] mb-5">
+                Community Reflections
+              </p>
+              <div className="space-y-4 flex-1">
+                {previewAnswers.map((ans) => (
+                  <div key={ans.id} className="pb-4 border-b border-parchment/[0.07] last:border-0">
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center text-[11px] text-gold font-bold flex-shrink-0">
+                        {ans.userName.charAt(0)}
+                      </div>
+                      <span className="text-parchment/80 text-sm font-medium">{ans.userName}</span>
+                      <span className="ml-auto text-parchment/30 text-[11px]">{ans.timeAgo}</span>
                     </div>
-                    <span className="text-parchment/60 text-xs font-medium">{ans.userName}</span>
-                    <span className="ml-auto text-parchment/20 text-[11px]">{ans.timeAgo}</span>
+                    <p className="text-parchment/70 text-sm leading-[1.65] line-clamp-3">{ans.answer}</p>
                   </div>
-                  <p className="text-parchment/50 text-xs leading-relaxed line-clamp-2">{ans.answer}</p>
-                </div>
-              ))}
-            </motion.div>
-          )}
+                ))}
+              </div>
+              <button
+                onClick={() => requireAuth(() => navigate("/question"))}
+                className="mt-4 text-gold/60 text-xs uppercase tracking-wider text-left hover:text-gold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+              >
+                {user ? "Read all reflections →" : "Sign in to join the conversation →"}
+              </button>
+            </div>
+          </motion.div>
         </motion.div>
 
         {/* Scroll cue */}
