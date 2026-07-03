@@ -1,8 +1,29 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 import { fetchTodayQuestion, fetchAnswers, type ApiQuestion, type ApiAnswer } from "../lib/api";
 import AuthModal from "../component/AuthModal";
+
+// Faint Hebrew words drifting in the hero background — pure ambience.
+const HERO_GLYPHS = [
+  { word: "בְּרֵאשִׁית", top: "12%", left: "8%",  size: 42, delay: "0s",   dur: "9s"  },
+  { word: "אוֹר",        top: "22%", left: "84%", size: 54, delay: "1.2s", dur: "11s" },
+  { word: "דָּבָר",       top: "66%", left: "6%",  size: 38, delay: "2.1s", dur: "10s" },
+  { word: "אֱלֹהִים",     top: "74%", left: "88%", size: 34, delay: "0.6s", dur: "12s" },
+  { word: "חֶסֶד",       top: "44%", left: "93%", size: 30, delay: "3s",   dur: "9.5s"},
+  { word: "אֱמֶת",       top: "56%", left: "3%",  size: 30, delay: "1.8s", dur: "13s" },
+];
+
+// Staggered entrance for the hero pieces (transform/opacity only).
+const heroStagger = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.16, delayChildren: 0.1 } },
+};
+const heroRise = {
+  hidden: { opacity: 0, y: 26 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] as const } },
+};
 const mockArtifact = {
   period: "Mesopotamian Period · c. 2217–2193 BCE",
   title: "Cylinder Seal of Ibni-Sharrum",
@@ -49,156 +70,176 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-ink text-parchment">
 
-      {/* ── Hero ── */}
-      <section className="border-b border-parchment/10 px-6 py-20 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-8 tracking-wider">
-          📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
-        </div>
-        <h1 className="text-5xl md:text-6xl font-serif text-parchment mb-5 leading-tight max-w-3xl mx-auto">
-          The <span className="text-gold">Original Script</span>
-        </h1>
-        <p className="text-parchment/50 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
-          Scripture as it was written. In the language it was spoken.
-          With the depth it was meant to carry.
-        </p>
-        <div className="flex justify-center mb-16">
-          {/* No requireAuth here — Ch1 is free for everyone */}
-          <button
-            onClick={() => navigate("/codex")}
-            className="px-8 py-4 bg-gold text-ink font-semibold rounded-lg hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
+      {/* ── Hero: The Original Script + Question of the Day ── */}
+      <section className="relative overflow-hidden border-b border-parchment/10 px-6 min-h-[100svh] flex flex-col items-center justify-center pt-16 pb-20">
+        {/* Layered radial glows — depth behind the whole hero */}
+        <div
+          className="pointer-events-none absolute left-1/2 -top-32 -translate-x-1/2 w-[1100px] h-[1100px] opacity-[0.11]"
+          style={{ background: "radial-gradient(circle, rgb(var(--color-gold)) 0%, transparent 58%)" }}
+        />
+        <div
+          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 w-[700px] h-[700px] opacity-[0.07]"
+          style={{ background: "radial-gradient(circle, rgb(var(--color-ember)) 0%, transparent 62%)" }}
+        />
+
+        {/* Drifting Hebrew words — ambience, hidden from screen readers */}
+        {HERO_GLYPHS.map((g) => (
+          <span
+            key={g.word}
+            aria-hidden
+            dir="rtl"
+            className="pointer-events-none absolute select-none text-gold hidden md:block"
+            style={{
+              top: g.top,
+              left: g.left,
+              fontSize: g.size,
+              fontFamily: "'Frank Ruhl Libre', serif",
+              opacity: 0.07,
+              animation: `os-drift ${g.dur} ease-in-out ${g.delay} infinite alternate`,
+            }}
           >
-            Open the Codex →
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto border-t border-parchment/10 pt-10">
-          {[
-            { value: "3", label: "Genesis Chapters" },
-            { value: "11", label: "Hebrew Words" },
-            { value: "3", label: "Languages" },
-            { value: "0", label: "Theological Bias" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <p className="text-gold font-serif font-bold text-3xl">{stat.value}</p>
-              <p className="text-parchment/30 text-xs uppercase tracking-widest mt-1">
-                {stat.label}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+            {g.word}
+          </span>
+        ))}
 
-      {/* ── Question of the Day ── */}
-      <section className="border-b border-parchment/10 py-14 px-6">
-        <p className="text-parchment/30 text-xs uppercase tracking-widest text-center mb-10">
-          — Question of the Day —
-        </p>
-        <div className="max-w-3xl mx-auto">
-          <div className="border border-gold/20 rounded-2xl overflow-hidden mb-8">
-            <div className="bg-slate/20 px-6 pt-8 pb-6">
-              <div className="flex items-center gap-3 mb-5">
-                <span className="px-3 py-1 rounded-full bg-gold/20 text-gold text-xs tracking-wider">
-                  Daily Reflection
-                </span>
-                <span className="text-parchment/30 text-xs">
-                  {new Date().toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
-              <p className="text-parchment font-serif text-2xl leading-relaxed mb-6">
-                {question?.text ?? "Loading today's question…"}
-              </p>
-              <button
-                onClick={() => setScriptureOpen(!scriptureOpen)}
-                className="flex items-center gap-3 text-left w-full"
-              >
-                <span className="w-0.5 h-6 bg-gold/40 rounded-full" />
-                <span className="text-gold/70 text-sm italic font-serif">
-                  {question?.scripture.reference}
-                </span>
-                <span className="text-parchment/30 text-xs ml-auto">
-                  {scriptureOpen ? "hide" : "read passage"}
-                </span>
-              </button>
-              {scriptureOpen && (
-                <div className="mt-4 pl-5 border-l border-gold/20">
-                  <p className="text-parchment/60 text-sm italic leading-relaxed">
-                    {question?.scripture.passage ? `"${question.scripture.passage}"` : question?.scripture.reference}
-                  </p>
-                </div>
-              )}
-            </div>
-            <div className="px-6 py-5 border-t border-parchment/10 flex items-center justify-between flex-wrap gap-3">
-              <div className="flex items-center gap-3 text-xs text-parchment/30">
-                <span>{answers.length} reflections shared</span>
-                <span>·</span>
-                <span>{question?.scripture.reference}</span>
-              </div>
-              {user ? (
-                <button
-                  onClick={() => navigate("/question")}
-                  className="px-5 py-2.5 bg-gold text-ink text-xs font-semibold rounded-lg hover:bg-gold-light transition-all uppercase tracking-wide"
-                >
-                  Answer Today's Question →
-                </button>
-              ) : (
-                <button
-                  onClick={() => setShowAuth(true)}
-                  className="px-5 py-2.5 border border-gold/30 text-gold/70 text-xs rounded-lg hover:border-gold hover:text-gold transition-all"
-                >
-                  ✦ Sign in to share your reflection
-                </button>
-              )}
-            </div>
-          </div>
+        <motion.div
+          variants={heroStagger}
+          initial="hidden"
+          animate="show"
+          className="relative max-w-3xl mx-auto text-center w-full"
+        >
+          {/* Title block */}
+          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-7 tracking-[0.18em] uppercase">
+            📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
+          </motion.div>
 
-          {/* Community preview */}
-          <p className="text-parchment/30 text-xs uppercase tracking-widest mb-4">
-            Community Reflections
-          </p>
-          <div className="space-y-3 mb-4">
-            {previewAnswers.map((ans) => (
-              <div key={ans.id} className="border border-parchment/10 rounded-xl p-5 bg-slate/10">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-7 h-7 rounded-full bg-slate/50 flex items-center justify-center text-xs text-gold font-bold">
-                    {ans.userName.charAt(0)}
-                  </div>
-                  <span className="text-parchment/60 text-sm font-medium">{ans.userName}</span>
-                  <span className="text-parchment/20 text-xs">·</span>
-                  <span className="text-parchment/30 text-xs">{ans.pathway}</span>
-                  <span className="ml-auto text-parchment/20 text-xs">{ans.timeAgo}</span>
-                </div>
-                <p className="text-parchment/60 text-sm leading-relaxed line-clamp-2">
-                  {ans.answer}
+          <motion.h1
+            variants={heroRise}
+            className="font-serif text-parchment leading-[1.04] tracking-[-0.03em] mb-4 text-[3.1rem] sm:text-7xl"
+          >
+            The{" "}
+            <span
+              className="text-gold"
+              style={{ textShadow: "0 0 60px rgba(212,175,90,0.35)" }}
+            >
+              Original Script
+            </span>
+          </motion.h1>
+
+          <motion.p variants={heroRise} className="text-parchment/50 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+            Scripture as it was written. In the language it was spoken.
+            With the depth it was meant to carry.
+          </motion.p>
+
+          {/* Question of the Day — the hook, elevated off the dark */}
+          <motion.div
+            variants={heroRise}
+            className="relative rounded-[26px] border border-gold/15 bg-slate/10 px-7 pt-8 pb-7 sm:px-10 sm:pt-10 sm:pb-8 text-left max-w-2xl mx-auto"
+            style={{
+              boxShadow:
+                "0 1px 0 rgba(212,175,90,0.08) inset, 0 40px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,90,0.04)",
+            }}
+          >
+            <div className="flex items-center gap-3 mb-5 flex-wrap">
+              <span className="px-3 py-1 rounded-full bg-gold/15 text-gold text-[11px] tracking-wider uppercase">
+                ✦ Question of the Day
+              </span>
+              <span className="text-parchment/30 text-xs">
+                {new Date().toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </span>
+            </div>
+
+            <p className="font-serif text-parchment text-[1.35rem] sm:text-[1.6rem] leading-[1.38] tracking-[-0.015em] mb-6">
+              {question?.text ?? "Loading today's question…"}
+            </p>
+
+            <button
+              onClick={() => setScriptureOpen(!scriptureOpen)}
+              className="flex items-center gap-3 text-left w-full mb-6 group"
+            >
+              <span className="w-0.5 h-6 bg-gold/40 rounded-full flex-shrink-0" />
+              <span className="text-gold/70 text-sm italic font-serif group-hover:text-gold transition-colors">
+                {question?.scripture.reference}
+              </span>
+              <span className="text-parchment/30 text-xs ml-auto">
+                {scriptureOpen ? "hide" : "read passage"}
+              </span>
+            </button>
+            {scriptureOpen && (
+              <div className="-mt-3 mb-6 pl-5 border-l border-gold/20">
+                <p className="text-parchment/60 text-sm italic leading-relaxed">
+                  {question?.scripture.passage ? `"${question.scripture.passage}"` : question?.scripture.reference}
                 </p>
+              </div>
+            )}
+
+            <div className="flex items-center justify-between flex-wrap gap-4 pt-5 border-t border-parchment/[0.08]">
+              <span className="text-parchment/30 text-xs">
+                {answers.length} reflections shared today
+              </span>
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => navigate("/codex")}
+                  className="px-5 py-3 border border-gold/25 text-gold/80 text-xs font-semibold rounded-xl hover:border-gold hover:text-gold hover:-translate-y-0.5 active:translate-y-0 transition-transform uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                >
+                  Open the Codex
+                </button>
                 <button
                   onClick={() => requireAuth(() => navigate("/question"))}
-                  className="mt-3 text-xs text-parchment/20 hover:text-gold transition-colors"
+                  className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-xs uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                  style={{ boxShadow: "0 12px 30px -8px rgba(212,175,90,0.35)" }}
                 >
-                  {user ? "Reply →" : "🔒 Sign in to reply →"}
+                  {user ? "Answer Today's Question →" : "Sign In to Answer →"}
                 </button>
               </div>
-            ))}
-          </div>
-          <button
-            onClick={() => requireAuth(() => navigate("/question"))}
-            className="w-full py-3 text-parchment/30 text-xs hover:text-parchment transition-colors border border-dashed border-parchment/10 rounded-xl text-center"
-          >
-            {user ? "View all community answers →" : "Sign in to see all reflections →"}
-          </button>
+            </div>
+          </motion.div>
+
+          {/* Social proof — quiet, under the card */}
+          {previewAnswers.length > 0 && (
+            <motion.div variants={heroRise} className="mt-6 grid sm:grid-cols-2 gap-3 text-left max-w-2xl mx-auto">
+              {previewAnswers.map((ans) => (
+                <div key={ans.id} className="border border-parchment/[0.08] rounded-xl p-4 bg-slate/[0.06]">
+                  <div className="flex items-center gap-2 mb-2.5">
+                    <div className="w-6 h-6 rounded-full bg-slate/50 flex items-center justify-center text-[10px] text-gold font-bold flex-shrink-0">
+                      {ans.userName.charAt(0)}
+                    </div>
+                    <span className="text-parchment/60 text-xs font-medium">{ans.userName}</span>
+                    <span className="ml-auto text-parchment/20 text-[11px]">{ans.timeAgo}</span>
+                  </div>
+                  <p className="text-parchment/50 text-xs leading-relaxed line-clamp-2">{ans.answer}</p>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </motion.div>
+
+        {/* Scroll cue */}
+        <div
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-parchment/25 text-[11px] tracking-[0.2em] uppercase"
+          style={{ animation: "os-bob 2.2s ease-in-out infinite" }}
+        >
+          Scroll ↓
         </div>
+
+        <style>{`
+          @keyframes os-drift { from { transform: translateY(0px); } to { transform: translateY(-22px); } }
+          @keyframes os-bob { 0%,100% { transform: translate(-50%, 0); opacity: 0.55; } 50% { transform: translate(-50%, 6px); opacity: 1; } }
+          @media (prefers-reduced-motion: reduce) {
+            [style*="os-drift"], [style*="os-bob"] { animation: none !important; }
+          }
+        `}</style>
       </section>
 
-      {/* ── Archaeological Artifact of the Day ── */}
-      <section className="border-b border-parchment/10 py-14 px-6 bg-slate/5">
-        <p className="text-parchment/30 text-xs uppercase tracking-widest text-center mb-10">
-          — Archaeological Artifact of the Day —
-        </p>
-        <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+      {/* ── Secondary hook: Archaeological Artifact of the Day (asymmetric split) ── */}
+      <section className="border-b border-parchment/10 py-16 px-6 bg-slate/5">
+        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr] gap-10 items-center">
           {/* Artifact image placeholder */}
-          <div className="aspect-video rounded-2xl border border-parchment/10 overflow-hidden bg-slate/20 flex flex-col items-center justify-center relative">
+          <div className="relative aspect-[4/5] md:aspect-auto md:h-full rounded-2xl border border-parchment/10 overflow-hidden bg-slate/20 flex flex-col items-center justify-center">
             <p className="text-7xl mb-3">🏛</p>
             <p className="text-parchment/20 text-xs absolute bottom-3 left-4">
               Wikimedia Commons · Public Domain
@@ -207,10 +248,13 @@ export default function LandingPage() {
 
           {/* Content */}
           <div>
+            <p className="text-parchment/30 text-[11px] uppercase tracking-[0.2em] mb-3">
+              — Archaeological Artifact of the Day —
+            </p>
             <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">
               🏛 {mockArtifact.period}
             </p>
-            <h3 className="text-parchment font-serif text-2xl font-bold mb-4 leading-snug">
+            <h3 className="text-parchment font-serif text-2xl sm:text-[1.75rem] font-bold mb-4 leading-snug tracking-[-0.01em]">
               {mockArtifact.title}
             </h3>
             <p className="text-parchment/50 text-sm leading-relaxed mb-5">
@@ -251,6 +295,44 @@ export default function LandingPage() {
 
             <p className="text-parchment/20 text-xs">{mockArtifact.source}</p>
           </div>
+        </div>
+      </section>
+
+      {/* ── The Codex / Deep Dive (below the fold) ── */}
+      <section className="border-b border-parchment/10 px-6 py-20 text-center">
+        <p className="text-gold/60 text-xs uppercase tracking-[0.2em] mb-4">
+          📜 The Deep Dive
+        </p>
+        <h2 className="text-4xl md:text-5xl font-serif text-parchment mb-5 leading-tight tracking-[-0.02em] max-w-3xl mx-auto">
+          Enter the <span className="text-gold">Codex</span>
+        </h2>
+        <p className="text-parchment/50 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
+          Read Genesis in English, Malayalam and Hebrew — tap any Hebrew word
+          for its root, meaning and history.
+        </p>
+        <div className="flex justify-center mb-16">
+          {/* No requireAuth here — Ch1 is free for everyone */}
+          <button
+            onClick={() => navigate("/codex")}
+            className="px-8 py-4 bg-gold text-ink font-semibold rounded-lg hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-sm uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          >
+            Open the Codex →
+          </button>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto border-t border-parchment/10 pt-10">
+          {[
+            { value: "3", label: "Genesis Chapters" },
+            { value: "11", label: "Hebrew Words" },
+            { value: "3", label: "Languages" },
+            { value: "0", label: "Theological Bias" },
+          ].map((stat) => (
+            <div key={stat.label}>
+              <p className="text-gold font-serif font-bold text-3xl">{stat.value}</p>
+              <p className="text-parchment/30 text-xs uppercase tracking-widest mt-1">
+                {stat.label}
+              </p>
+            </div>
+          ))}
         </div>
       </section>
 
