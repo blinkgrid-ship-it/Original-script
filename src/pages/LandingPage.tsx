@@ -71,7 +71,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-ink text-parchment">
 
       {/* ── Hero: The Original Script + Question of the Day ── */}
-      <section className="relative overflow-hidden border-b border-parchment/10 px-6 min-h-[100svh] flex flex-col items-center justify-center pt-16 pb-20">
+      {/* min-h subtracts the TopNav (~118px) so the whole hero fits the first viewport */}
+      <section className="relative overflow-hidden border-b border-parchment/10 px-6 min-h-[calc(100svh-118px)] flex flex-col items-center justify-center pt-10 pb-16">
         {/* Layered radial glows — depth behind the whole hero */}
         <div
           className="pointer-events-none absolute left-1/2 -top-32 -translate-x-1/2 w-[1100px] h-[1100px] opacity-[0.11]"
@@ -106,10 +107,10 @@ export default function LandingPage() {
           variants={heroStagger}
           initial="hidden"
           animate="show"
-          className="relative max-w-3xl mx-auto text-center w-full"
+          className="relative max-w-6xl mx-auto text-center w-full"
         >
           {/* Title block */}
-          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-7 tracking-[0.18em] uppercase">
+          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-5 tracking-[0.18em] uppercase">
             📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
           </motion.div>
 
@@ -126,7 +127,7 @@ export default function LandingPage() {
             </span>
           </motion.h1>
 
-          <motion.p variants={heroRise} className="text-parchment/50 text-base sm:text-lg max-w-xl mx-auto mb-10 leading-relaxed">
+          <motion.p variants={heroRise} className="text-parchment/50 text-base sm:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
             Scripture as it was written. In the language it was spoken.
             With the depth it was meant to carry.
           </motion.p>
@@ -185,13 +186,22 @@ export default function LandingPage() {
                 <span className="text-parchment/30 text-xs">
                   {answers.length} reflections shared today
                 </span>
-                <button
-                  onClick={() => requireAuth(() => navigate("/question"))}
-                  className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-xs uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-                  style={{ boxShadow: "0 12px 30px -8px rgba(212,175,90,0.35)" }}
-                >
-                  {user ? "Answer Today's Question →" : "Sign In to Answer →"}
-                </button>
+                <div className="flex items-center gap-3 flex-wrap">
+                  {/* No requireAuth — Codex Ch1 is free for everyone */}
+                  <button
+                    onClick={() => navigate("/codex")}
+                    className="px-5 py-3 border border-gold/25 text-gold/80 text-xs font-semibold rounded-xl hover:border-gold hover:text-gold hover:-translate-y-0.5 active:translate-y-0 transition-transform uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                  >
+                    📜 Open the Codex
+                  </button>
+                  <button
+                    onClick={() => requireAuth(() => navigate("/question"))}
+                    className="px-6 py-3 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-xs uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                    style={{ boxShadow: "0 12px 30px -8px rgba(212,175,90,0.35)" }}
+                  >
+                    {user ? "Answer Today's Question →" : "Sign In to Answer →"}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -301,44 +311,6 @@ export default function LandingPage() {
 
             <p className="text-parchment/20 text-xs">{mockArtifact.source}</p>
           </div>
-        </div>
-      </section>
-
-      {/* ── The Codex / Deep Dive (below the fold) ── */}
-      <section className="border-b border-parchment/10 px-6 py-20 text-center">
-        <p className="text-gold/60 text-xs uppercase tracking-[0.2em] mb-4">
-          📜 The Deep Dive
-        </p>
-        <h2 className="text-4xl md:text-5xl font-serif text-parchment mb-5 leading-tight tracking-[-0.02em] max-w-3xl mx-auto">
-          Enter the <span className="text-gold">Codex</span>
-        </h2>
-        <p className="text-parchment/50 text-lg max-w-2xl mx-auto mb-10 leading-relaxed">
-          Read Genesis in English, Malayalam and Hebrew — tap any Hebrew word
-          for its root, meaning and history.
-        </p>
-        <div className="flex justify-center mb-16">
-          {/* No requireAuth here — Ch1 is free for everyone */}
-          <button
-            onClick={() => navigate("/codex")}
-            className="px-8 py-4 bg-gold text-ink font-semibold rounded-lg hover:bg-gold-light hover:-translate-y-0.5 active:translate-y-0 transition-transform text-sm uppercase tracking-wide focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
-          >
-            Open the Codex →
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-2xl mx-auto border-t border-parchment/10 pt-10">
-          {[
-            { value: "3", label: "Genesis Chapters" },
-            { value: "11", label: "Hebrew Words" },
-            { value: "3", label: "Languages" },
-            { value: "0", label: "Theological Bias" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <p className="text-gold font-serif font-bold text-3xl">{stat.value}</p>
-              <p className="text-parchment/30 text-xs uppercase tracking-widest mt-1">
-                {stat.label}
-              </p>
-            </div>
-          ))}
         </div>
       </section>
 
