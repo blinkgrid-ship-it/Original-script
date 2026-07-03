@@ -72,7 +72,7 @@ export default function LandingPage() {
 
       {/* ── Hero: The Original Script + Question of the Day ── */}
       {/* min-h subtracts the TopNav (~118px) so the whole hero fits the first viewport */}
-      <section className="relative overflow-hidden border-b border-parchment/10 px-6 min-h-[calc(100svh-118px)] flex flex-col items-center justify-center pt-10 pb-16">
+      <section className="relative overflow-hidden border-b border-parchment/10 px-6 min-h-[calc(100svh-118px)] flex flex-col items-center justify-center pt-5 pb-10">
         {/* Layered radial glows — depth behind the whole hero */}
         <div
           className="pointer-events-none absolute left-1/2 -top-32 -translate-x-1/2 w-[1100px] h-[1100px] opacity-[0.11]"
@@ -110,13 +110,13 @@ export default function LandingPage() {
           className="relative max-w-6xl mx-auto text-center w-full"
         >
           {/* Title block */}
-          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-5 tracking-[0.18em] uppercase">
+          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-4 tracking-[0.18em] uppercase">
             📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
           </motion.div>
 
           <motion.h1
             variants={heroRise}
-            className="font-serif text-parchment leading-[1.04] tracking-[-0.03em] mb-4 text-[3.1rem] sm:text-7xl"
+            className="font-serif text-parchment leading-[1.04] tracking-[-0.03em] mb-3 text-[2.6rem] sm:text-6xl"
           >
             The{" "}
             <span
@@ -127,7 +127,7 @@ export default function LandingPage() {
             </span>
           </motion.h1>
 
-          <motion.p variants={heroRise} className="text-parchment/50 text-base sm:text-lg max-w-xl mx-auto mb-8 leading-relaxed">
+          <motion.p variants={heroRise} className="text-parchment/50 text-base max-w-xl mx-auto mb-6 leading-relaxed">
             Scripture as it was written. In the language it was spoken.
             With the depth it was meant to carry.
           </motion.p>
@@ -139,7 +139,7 @@ export default function LandingPage() {
           >
             {/* Question of the Day — the hook, elevated off the dark */}
             <div
-              className="relative rounded-[26px] border border-gold/15 bg-slate/10 px-7 pt-8 pb-7 sm:px-9 sm:pt-9 flex flex-col"
+              className="relative rounded-[26px] border border-gold/15 bg-slate/10 px-7 pt-7 pb-6 sm:px-9 flex flex-col"
               style={{
                 boxShadow:
                   "0 1px 0 rgba(212,175,90,0.08) inset, 0 40px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(212,175,90,0.04)",
@@ -158,7 +158,7 @@ export default function LandingPage() {
                 </span>
               </div>
 
-              <p className="font-serif text-parchment text-[1.35rem] sm:text-[1.55rem] leading-[1.38] tracking-[-0.015em] mb-6">
+              <p className="font-serif text-parchment text-[1.3rem] sm:text-[1.45rem] leading-[1.36] tracking-[-0.015em] mb-5">
                 {question?.text ?? "Loading today's question…"}
               </p>
 
@@ -206,7 +206,7 @@ export default function LandingPage() {
             </div>
 
             {/* Community rail — what people are saying, right now */}
-            <div className="rounded-[26px] border border-parchment/10 bg-slate/[0.07] px-6 pt-7 pb-6 flex flex-col">
+            <div className="rounded-[26px] border border-parchment/10 bg-slate/[0.07] px-6 pt-6 pb-5 flex flex-col">
               <p className="text-parchment/40 text-[11px] uppercase tracking-[0.18em] mb-5">
                 Community Reflections
               </p>
@@ -236,7 +236,7 @@ export default function LandingPage() {
 
         {/* Scroll cue */}
         <div
-          className="absolute bottom-6 left-1/2 -translate-x-1/2 text-parchment/25 text-[11px] tracking-[0.2em] uppercase"
+          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-parchment/25 text-[11px] tracking-[0.2em] uppercase"
           style={{ animation: "os-bob 2.2s ease-in-out infinite" }}
         >
           Scroll ↓
