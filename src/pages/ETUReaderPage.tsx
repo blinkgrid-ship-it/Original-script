@@ -281,38 +281,36 @@ export default function ETUReaderPage() {
               <div style={{ marginTop: "2.5rem", color: C.gold, fontSize: 13, letterSpacing: "0.14em", textTransform: "uppercase", animation: "etu-bob 2s ease-in-out infinite" }}>Scroll to begin ↓</div>
             </section>
 
-            {/* One verse per screen — verse number lives in a LEFT gutter (mandated:
-                left-aligned numbering), like the margin numerals of a study Bible. */}
+            {/* One verse per screen */}
             {verses.map((v) => {
               const highlighted = jumpVerse === v.number;
               return (
                 <section key={v.number} id={`v-${v.number}`}
-                  style={{ scrollSnapAlign: "start", minHeight: "calc(100vh - 58px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "clamp(2rem, 8vh, 6rem) clamp(1.25rem, 6vw, 5rem)", position: "relative" }}>
+                  style={{ scrollSnapAlign: "start", minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "clamp(2rem, 8vh, 6rem) clamp(1.5rem, 8vw, 6rem)", position: "relative" }}>
+                  {/* Big faint verse number watermark */}
+                  <motion.span
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    whileInView={{ opacity: 1, scale: 1 }}
+                    viewport={{ root: mainRef, amount: 0.5 }}
+                    transition={{ duration: 0.6, ease: "easeOut" }}
+                    style={{ position: "absolute", top: "clamp(1rem, 6vh, 4rem)", fontFamily: HEAD, fontSize: "clamp(5rem, 18vw, 11rem)", fontWeight: 700, color: highlighted ? "rgba(176,137,72,0.28)" : "rgba(29,107,95,0.09)", lineHeight: 1, transition: "color 0.5s", pointerEvents: "none", userSelect: "none" }}>{v.number}</motion.span>
                   <motion.div
                     initial={{ opacity: 0, y: 28 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ root: mainRef, amount: 0.55 }}
                     transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ display: "flex", gap: "clamp(1.1rem, 3vw, 2.2rem)", maxWidth: 820, width: "100%", alignItems: "flex-start", textAlign: "left" }}>
-                    {/* Left gutter: big serif numeral over a gold tick */}
-                    <div style={{ flexShrink: 0, textAlign: "right", width: "clamp(3rem, 8vw, 5.5rem)", userSelect: "none" }}>
-                      <div style={{ fontFamily: HEAD, fontSize: "clamp(2.6rem, 7vw, 4.6rem)", fontWeight: 700, lineHeight: 0.95, color: highlighted ? C.gold : C.emerald, transition: "color 0.5s" }}>{v.number}</div>
-                      <div style={{ marginTop: "0.7rem", marginLeft: "auto", width: "2.2rem", height: 3, borderRadius: 2, background: highlighted ? C.gold : C.goldSoft, transition: "background 0.5s" }} />
-                    </div>
-                    {/* Verse text block */}
-                    <div style={{ flex: 1, minWidth: 0, borderLeft: `1px solid ${C.panelEdge}`, paddingLeft: "clamp(1.1rem, 3vw, 2.2rem)" }}>
-                      <span style={{ display: "block", color: C.inkFaint, fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", marginBottom: "1.1rem", textTransform: "uppercase" }}>{book} {chapter}:{v.number}</span>
-                      {lang !== "ml" && (
-                        <p style={{ fontFamily: SERIF, fontSize: "clamp(1.35rem, 3.1vw, 1.9rem)", lineHeight: 1.65, color: C.ink }}>{v.english}</p>
-                      )}
-                      {lang !== "en" && (
-                        v.malayalam
-                          ? <p style={{ fontFamily: ML, fontSize: "clamp(1.2rem, 2.8vw, 1.7rem)", lineHeight: 1.85, color: C.mlText, marginTop: lang === "both" ? "1.4rem" : 0 }}>{v.malayalam}</p>
-                          : lang === "ml"
-                            ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
-                            : null
-                      )}
-                    </div>
+                    style={{ maxWidth: 720, position: "relative", zIndex: 1 }}>
+                    <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
+                    {lang !== "ml" && (
+                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>{v.english}</p>
+                    )}
+                    {lang !== "en" && (
+                      v.malayalam
+                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText, marginTop: lang === "both" ? "1.5rem" : 0 }}>{v.malayalam}</p>
+                        : lang === "ml"
+                          ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
+                          : null
+                    )}
                   </motion.div>
                 </section>
               );
