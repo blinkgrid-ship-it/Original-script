@@ -1,4 +1,4 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
@@ -26,7 +26,11 @@ function AppRoutes() {
         <Route path="/question" element={<QuestionPage />} />
         <Route path="/codex" element={<CodexPage />} />
         <Route path="/codex/:book/:chapter/:verse" element={<VerseReaderPage />} />
-        <Route path="/etu" element={<ETUReaderPage />} />
+        {/* Stable, deep-linkable verse identity: /etu/genesis/1/1 — the university
+            course platform (and anyone else) can link straight into a specific verse. */}
+        <Route path="/etu" element={<Navigate to="/etu/genesis/1" replace />} />
+        <Route path="/etu/:book/:chapter" element={<ETUReaderPage />} />
+        <Route path="/etu/:book/:chapter/:verse" element={<ETUReaderPage />} />
         <Route path="/conquest" element={<ConquestPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/community/:userId" element={<PublicProfilePage />} />

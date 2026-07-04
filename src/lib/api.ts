@@ -121,6 +121,29 @@ export async function fetchVerse(
   return handle<VerseData>(await fetch(`${API_URL}/api/verse/${book}/${chapter}/${verse}`));
 }
 
+// ── ETU reader (bilingual/multilingual chapter view, backed by Verse + VerseTranslation) ──
+export interface ChapterVerse {
+  verseRef: string;
+  verseNumber: number;
+  osrText: string;
+  hebrewText: string | null;
+  ndh: { code: string | null; confidence: string | null };
+  // Keyed by ISO language code, e.g. { ml: "...", ta: "..." }. Missing key = not translated yet.
+  translations: Record<string, string>;
+}
+export interface ChapterData {
+  book: string;
+  chapter: number;
+  verses: ChapterVerse[];
+}
+
+// GET every verse in a chapter (OSR text, Hebrew, translations). Public. Real data —
+// no mock short-circuit, since this is what replaces the static ETU data file. Returns
+// `verses: []` for a book/chapter with no content yet (not an error).
+export async function fetchChapter(book: string, chapter: number | string): Promise<ChapterData> {
+  return handle<ChapterData>(await fetch(`${API_URL}/api/chapter/${book}/${chapter}`));
+}
+
 // POST a reply to an answer. Auth.
 export async function postReply(answerId: string, text: string): Promise<ApiReply> {
   return handle<ApiReply>(
