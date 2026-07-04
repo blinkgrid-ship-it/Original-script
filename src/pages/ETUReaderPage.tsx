@@ -81,7 +81,9 @@ export default function ETUReaderPage() {
 
   const [testament, setTestament] = useState<"old" | "new">("old");
   const [lang, setLang] = useState<Lang>("both");
-  const [readMode, setReadMode] = useState<"column" | "immersive">("column");
+  // Scroll (immersive) is the default reading mode per the locked "mobile-first
+  // scrolling UI" decision — Column stays available as an alternate view.
+  const [readMode, setReadMode] = useState<"column" | "immersive">("immersive");
   const [search, setSearch] = useState("");
   const [jumpVerse, setJumpVerse] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
