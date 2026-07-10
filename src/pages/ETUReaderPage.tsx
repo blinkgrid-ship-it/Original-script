@@ -1,7 +1,7 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { genesisETU } from "../data/etuGenesis";
+import { useNavigate, useParams } from "react-router-dom";
+import { fetchChapter } from "../lib/api";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Eastern Theology University · ISR Bible Reader
@@ -63,31 +63,82 @@ const NEW_TESTAMENT: Book[] = [
 
 type Lang = "both" | "en" | "ml";
 
+// Rendering-shape verse — mapped from the API's ChapterVerse so the JSX below barely
+// had to change when this page moved off the static file.
+interface DisplayVerse {
+  number: number;
+  english: string;
+  malayalam: string;
+}
+
 export default function ETUReaderPage() {
   const navigate = useNavigate();
+  // book/chapter/verse are the verse's stable identity, lived in the URL — not
+  // useState — so /etu/genesis/1/1 is a real, shareable, deep-linkable address
+  // (this is what lets the university course platform link straight to a verse).
+  const params = useParams<{ book: string; chapter: string; verse?: string }>();
+  const urlChapter = Number(params.chapter) || 1;
+
   const [testament, setTestament] = useState<"old" | "new">("old");
-  const [book, setBook] = useState("Genesis");
-  const [chapter, setChapter] = useState(1);
   const [lang, setLang] = useState<Lang>("both");
-  const [readMode, setReadMode] = useState<"column" | "immersive">("column");
+  // Scroll (immersive) is the default reading mode per the locked "mobile-first
+  // scrolling UI" decision — Column stays available as an alternate view.
+  const [readMode, setReadMode] = useState<"column" | "immersive">("immersive");
   const [search, setSearch] = useState("");
   const [jumpVerse, setJumpVerse] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [verses, setVerses] = useState<DisplayVerse[] | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
 
   const books = testament === "old" ? OLD_TESTAMENT : NEW_TESTAMENT;
-  const activeBook = [...OLD_TESTAMENT, ...NEW_TESTAMENT].find((b) => b.name === book)!;
+  const activeBook =
+    [...OLD_TESTAMENT, ...NEW_TESTAMENT].find(
+      (b) => b.name.toLowerCase() === (params.book ?? "genesis").toLowerCase(),
+    ) ?? OLD_TESTAMENT[0];
+  const book = activeBook.name;
+  const chapter = Math.min(Math.max(urlChapter, 1), activeBook.chapters);
 
-  // Genesis is the only book with verse content right now.
-  const chapterData = useMemo(
-    () => (book === "Genesis" ? genesisETU.find((c) => c.number === chapter) ?? null : null),
-    [book, chapter],
-  );
+  // Fetch this chapter from the real database (Verse + VerseTranslation) whenever the
+  // URL's book/chapter changes. `verses: null` means either loading or genuinely no
+  // content yet — both render the same "not uploaded" state, just gated by `loading`.
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchChapter(book, chapter)
+      .then((data) => {
+        if (cancelled) return;
+        setVerses(
+          data.verses.length
+            ? data.verses.map((v) => ({
+                number: v.verseNumber,
+                english: v.osrText,
+                malayalam: v.translations.ml ?? "",
+              }))
+            : null,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setVerses(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [book, chapter]);
 
   // Reset scroll when the chapter changes.
   useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 });
   }, [book, chapter]);
+
+  // A verse in the URL (e.g. /etu/genesis/1/5) highlights + scrolls to it on load.
+  useEffect(() => {
+    const v = params.verse ? parseInt(params.verse, 10) : null;
+    if (v) setJumpVerse(v);
+  }, [params.verse]);
 
   // Clear a verse highlight shortly after jumping to it.
   useEffect(() => {
@@ -99,8 +150,12 @@ export default function ETUReaderPage() {
   }, [jumpVerse]);
 
   function selectBook(name: string) {
-    setBook(name);
-    setChapter(1);
+    navigate(`/etu/${name.toLowerCase()}/1`);
+    setSidebarOpen(false);
+  }
+
+  function goToChapter(n: number) {
+    navigate(`/etu/${book.toLowerCase()}/${n}`);
     setSidebarOpen(false);
   }
 
@@ -110,9 +165,8 @@ export default function ETUReaderPage() {
     if (!m) return;
     const ch = parseInt(m[1], 10);
     const v = parseInt(m[2], 10);
-    if (book === "Genesis" && ch >= 1 && ch <= 50) {
-      setChapter(ch);
-      setJumpVerse(v);
+    if (ch >= 1 && ch <= 50) {
+      navigate(`/etu/genesis/${ch}/${v}`);
     }
   }
 
@@ -202,7 +256,7 @@ export default function ETUReaderPage() {
             <div style={{ fontSize: 10, letterSpacing: "0.16em", color: C.inkFaint, textTransform: "uppercase", marginBottom: "0.7rem" }}>{activeBook.name} · Chapters</div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
               {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((n) => (
-                <button key={n} onClick={() => { setChapter(n); setSidebarOpen(false); }}
+                <button key={n} onClick={() => goToChapter(n)}
                   style={{ cursor: "pointer", borderRadius: 6, padding: "6px 0", fontSize: 12, fontFamily: SERIF, border: `1px solid ${chapter === n ? C.emerald : C.panelEdge}`, background: chapter === n ? C.emerald : C.paper, color: chapter === n ? "#F6F1E7" : C.inkSoft }}>
                   {n}
                 </button>
@@ -212,7 +266,7 @@ export default function ETUReaderPage() {
         </aside>
 
         {/* ── Reading pane ── */}
-        {readMode === "immersive" && chapterData ? (
+        {readMode === "immersive" && verses ? (
           <main
             ref={mainRef}
             style={{
@@ -230,7 +284,7 @@ export default function ETUReaderPage() {
             </section>
 
             {/* One verse per screen */}
-            {chapterData.verses.map((v) => {
+            {verses.map((v) => {
               const highlighted = jumpVerse === v.number;
               return (
                 <section key={v.number} id={`v-${v.number}`}
@@ -273,8 +327,8 @@ export default function ETUReaderPage() {
                 Study {book} {chapter} verse-by-verse →
               </button>
               <div style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}>
-                <button disabled={chapter <= 1} onClick={() => setChapter((c) => c - 1)} style={navBtn(chapter <= 1)}>← Previous</button>
-                <button disabled={chapter >= activeBook.chapters} onClick={() => setChapter((c) => c + 1)} style={navBtn(chapter >= activeBook.chapters)}>Next →</button>
+                <button disabled={chapter <= 1} onClick={() => goToChapter(chapter - 1)} style={navBtn(chapter <= 1)}>← Previous</button>
+                <button disabled={chapter >= activeBook.chapters} onClick={() => goToChapter(chapter + 1)} style={navBtn(chapter >= activeBook.chapters)}>Next →</button>
               </div>
             </section>
           </main>
@@ -288,9 +342,13 @@ export default function ETUReaderPage() {
             </div>
             <p style={{ fontFamily: HEAD, fontStyle: "italic", fontSize: 18, color: C.inkFaint, marginBottom: "2rem" }}>Chapter {chapter}</p>
 
-            {chapterData ? (
+            {loading ? (
+              <div style={{ textAlign: "center", padding: "4rem 1rem", color: C.inkFaint, fontStyle: "italic" }}>
+                Loading chapter…
+              </div>
+            ) : verses ? (
               <div>
-                {chapterData.verses.map((v) => {
+                {verses.map((v) => {
                   const highlighted = jumpVerse === v.number;
                   return (
                     <div key={v.number} id={`v-${v.number}`}
@@ -331,9 +389,9 @@ export default function ETUReaderPage() {
 
             {/* Prev / next chapter */}
             <div style={{ display: "flex", justifyContent: "space-between", marginTop: "2.5rem" }}>
-              <button disabled={chapter <= 1} onClick={() => setChapter((c) => c - 1)} style={navBtn(chapter <= 1)}>← Previous</button>
+              <button disabled={chapter <= 1} onClick={() => goToChapter(chapter - 1)} style={navBtn(chapter <= 1)}>← Previous</button>
               <span style={{ fontSize: 12, color: C.inkFaint, alignSelf: "center", fontStyle: "italic" }}>Chapter {chapter} of {activeBook.chapters}</span>
-              <button disabled={chapter >= activeBook.chapters} onClick={() => setChapter((c) => c + 1)} style={navBtn(chapter >= activeBook.chapters)}>Next →</button>
+              <button disabled={chapter >= activeBook.chapters} onClick={() => goToChapter(chapter + 1)} style={navBtn(chapter >= activeBook.chapters)}>Next →</button>
             </div>
           </div>
         </main>

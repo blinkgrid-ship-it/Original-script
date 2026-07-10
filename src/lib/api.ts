@@ -121,6 +121,29 @@ export async function fetchVerse(
   return handle<VerseData>(await fetch(`${API_URL}/api/verse/${book}/${chapter}/${verse}`));
 }
 
+// ── ETU reader (bilingual/multilingual chapter view, backed by Verse + VerseTranslation) ──
+export interface ChapterVerse {
+  verseRef: string;
+  verseNumber: number;
+  osrText: string;
+  hebrewText: string | null;
+  ndh: { code: string | null; confidence: string | null };
+  // Keyed by ISO language code, e.g. { ml: "...", ta: "..." }. Missing key = not translated yet.
+  translations: Record<string, string>;
+}
+export interface ChapterData {
+  book: string;
+  chapter: number;
+  verses: ChapterVerse[];
+}
+
+// GET every verse in a chapter (OSR text, Hebrew, translations). Public. Real data —
+// no mock short-circuit, since this is what replaces the static ETU data file. Returns
+// `verses: []` for a book/chapter with no content yet (not an error).
+export async function fetchChapter(book: string, chapter: number | string): Promise<ChapterData> {
+  return handle<ChapterData>(await fetch(`${API_URL}/api/chapter/${book}/${chapter}`));
+}
+
 // POST a reply to an answer. Auth.
 export async function postReply(answerId: string, text: string): Promise<ApiReply> {
   return handle<ApiReply>(
@@ -141,6 +164,133 @@ export async function postPathway(pathway: string): Promise<{ success: boolean; 
       body: JSON.stringify({ pathway }),
     }),
   );
+}
+
+// ── Admin portal (all endpoints require an is_admin user; backend re-checks per call) ──
+export interface AdminStats {
+  success: boolean;
+  verses: { total: number; withHebrew: number; byBook: { book: string; verses: number }[] };
+  translations: { language: string; verses: number }[];
+  users: { total: number; admins: number };
+}
+export interface AdminVerse {
+  id: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  osrText: string;
+  hebrewText: string | null;
+  transliteration: string | null;
+  ndh: { code: string | null; confidence: string | null };
+  translations: Record<string, string>;
+}
+export interface AdminVerseList {
+  success: boolean;
+  total: number;
+  page: number;
+  pageSize: number;
+  verses: AdminVerse[];
+}
+export interface ImportRowError { rowNumber: number; ref: string; error: string }
+export interface ImportPreview {
+  success: boolean;
+  dryRun: boolean;
+  totalRows: number;
+  toCreate: number;
+  toUpdate: number;
+  errorCount: number;
+  errors: ImportRowError[];
+}
+export interface ImportResult {
+  success: boolean;
+  totalRows: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  errors: ImportRowError[];
+}
+
+// 403 → not an admin; the layout uses this to bounce non-admins to /home.
+export async function fetchAdminMe(): Promise<{ isAdmin: boolean; email: string | null }> {
+  return handle(await fetch(`${API_URL}/api/admin/me`, { headers: await authHeaders() }));
+}
+
+export async function fetchAdminStats(): Promise<AdminStats> {
+  return handle(await fetch(`${API_URL}/api/admin/stats`, { headers: await authHeaders() }));
+}
+
+export async function fetchAdminVerses(params: {
+  book?: string; chapter?: string; search?: string; page?: number; pageSize?: number;
+}): Promise<AdminVerseList> {
+  const q = new URLSearchParams();
+  if (params.book) q.set('book', params.book);
+  if (params.chapter) q.set('chapter', params.chapter);
+  if (params.search) q.set('search', params.search);
+  q.set('page', String(params.page ?? 1));
+  q.set('pageSize', String(params.pageSize ?? 50));
+  return handle(await fetch(`${API_URL}/api/admin/verses?${q}`, { headers: await authHeaders() }));
+}
+
+export async function createAdminVerse(body: {
+  book: string; chapter: number; verse: number; osrText: string;
+  hebrewText?: string; translations?: Record<string, string>;
+}): Promise<{ success: boolean; verse: AdminVerse }> {
+  return handle(
+    await fetch(`${API_URL}/api/admin/verses`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function updateAdminVerse(id: string, body: {
+  osrText?: string; hebrewText?: string; transliteration?: string;
+  translations?: Record<string, string>;
+}): Promise<{ success: boolean; verse: AdminVerse }> {
+  return handle(
+    await fetch(`${API_URL}/api/admin/verses/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+      body: JSON.stringify(body),
+    }),
+  );
+}
+
+export async function deleteAdminVerse(id: string): Promise<{ success: boolean }> {
+  return handle(
+    await fetch(`${API_URL}/api/admin/verses/${id}`, { method: 'DELETE', headers: await authHeaders() }),
+  );
+}
+
+// mode: which column/table the file fills. book: admin-selected target book — overrides
+// the file's Book column (translators often write book names in their own language).
+export async function adminImport(
+  action: 'preview' | 'commit',
+  file: File,
+  mode: 'english' | 'hebrew' | 'translation',
+  opts: { languageCode?: string; book?: string } = {},
+): Promise<ImportPreview & ImportResult> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('mode', mode);
+  if (opts.languageCode) form.append('languageCode', opts.languageCode);
+  if (opts.book) form.append('book', opts.book);
+  return handle(
+    await fetch(`${API_URL}/api/admin/import/${action}`, {
+      method: 'POST',
+      headers: await authHeaders(), // no Content-Type — browser sets multipart boundary
+      body: form,
+    }),
+  );
+}
+
+// Returns the export CSV as a Blob for download.
+export async function exportAdminVerses(book?: string): Promise<Blob> {
+  const q = book ? `?book=${encodeURIComponent(book)}` : '';
+  const res = await fetch(`${API_URL}/api/admin/verses/export${q}`, { headers: await authHeaders() });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  return res.blob();
 }
 
 // A user's public profile (shape matches src/data/communityData.ts PublicProfile).
