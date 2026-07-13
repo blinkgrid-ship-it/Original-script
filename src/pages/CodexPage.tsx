@@ -353,32 +353,21 @@ export default function CodexPage() {
 
             {/* Verses */}
             <div className="px-6 py-8 max-w-3xl space-y-6">
-              {/* Eastern Theology University — academic bilingual reader entry */}
-              <button
-                onClick={() => navigate("/etu")}
-                className="w-full text-left rounded-2xl p-5 border border-emerald-700/40 bg-gradient-to-br from-emerald-900/20 to-transparent hover:border-emerald-600/70 transition-all group"
-              >
-                <p className="text-emerald-400/80 text-xs uppercase tracking-widest mb-1">🎓 Eastern Theology University</p>
-                <p className="text-parchment font-serif text-lg group-hover:text-emerald-300 transition-colors">
-                  Open the full ISR Bible — English &amp; Malayalam →
-                </p>
-                <p className="text-parchment/40 text-xs mt-1">
-                  All 66 books, side-by-side translation, academic study reader.
-                </p>
-              </button>
-
               {/* Deep OSR reader entry */}
               <button
                 onClick={() => navigate(`/codex/genesis/${chapter.number}/1`)}
-                className="w-full text-left rounded-2xl p-5 border border-gold/30 bg-gradient-to-br from-[#160d2e] to-[#07040f] hover:border-gold/60 transition-all group"
+                className="w-full flex items-center justify-between gap-4 text-left rounded-xl px-5 py-4 border border-gold/20 bg-gold/5 hover:border-gold/50 hover:bg-gold/10 transition-all group"
               >
-                <p className="text-gold text-xs uppercase tracking-widest mb-1">✦ OriginalScript · Deep Read</p>
-                <p className="text-parchment font-serif text-lg group-hover:text-gold transition-colors">
-                  Read Genesis {chapter.number} verse-by-verse →
-                </p>
-                <p className="text-parchment/40 text-xs mt-1">
-                  The OSR translation with source layer, cinematic scene, word study &amp; scholar's conclusion.
-                </p>
+                <div>
+                  <p className="text-gold/70 text-xs uppercase tracking-widest mb-1">✦ Deep Read</p>
+                  <p className="text-parchment font-serif text-base group-hover:text-gold transition-colors">
+                    Read Genesis {chapter.number} verse-by-verse
+                  </p>
+                  <p className="text-parchment/40 text-xs mt-1">
+                    Source layer, cinematic scene, word study &amp; scholar's conclusion.
+                  </p>
+                </div>
+                <span className="text-gold/50 group-hover:text-gold text-xl shrink-0 transition-colors">→</span>
               </button>
 
               {chapter.verses.map((verse) => {

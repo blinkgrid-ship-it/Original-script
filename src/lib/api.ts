@@ -125,6 +125,8 @@ export async function fetchVerse(
 export interface ChapterVerse {
   verseRef: string;
   verseNumber: number;
+  // Stable verse identity — highlights are keyed off this, not the verse UUID.
+  verseFingerprint: string | null;
   osrText: string;
   hebrewText: string | null;
   ndh: { code: string | null; confidence: string | null };
@@ -142,6 +144,58 @@ export interface ChapterData {
 // `verses: []` for a book/chapter with no content yet (not an error).
 export async function fetchChapter(book: string, chapter: number | string): Promise<ChapterData> {
   return handle<ChapterData>(await fetch(`${API_URL}/api/chapter/${book}/${chapter}`));
+}
+
+// ── Verse highlights (ETU reader; per-user, persisted) ──────────────────────────
+export interface Highlight {
+  verseFingerprint: string;
+  book: string;
+  chapter: number;
+  verse: number;
+  color: string; // hex
+  style: "highlight" | "underline";
+  updatedAt: string;
+}
+
+// The current user's highlights, optionally scoped to one book+chapter (the ETU
+// reader passes book+chapter on load; the "My Highlights" panel omits them). Auth —
+// returns an empty list rather than throwing when signed out.
+export async function fetchHighlights(
+  scope?: { book: string; chapter: number | string },
+): Promise<Highlight[]> {
+  const headers = await authHeaders();
+  if (!("Authorization" in headers)) return []; // signed out — nothing to fetch
+  const q = scope ? `?book=${encodeURIComponent(scope.book)}&chapter=${scope.chapter}` : "";
+  const body = await handle<{ success: boolean; highlights: Highlight[] }>(
+    await fetch(`${API_URL}/api/highlights${q}`, { headers }),
+  );
+  return body.highlights;
+}
+
+// Create or update the current user's highlight for a verse. Auth.
+export async function saveHighlight(
+  verseFingerprint: string,
+  color: string,
+  style: "highlight" | "underline",
+): Promise<Highlight> {
+  const body = await handle<{ success: boolean; highlight: Highlight }>(
+    await fetch(`${API_URL}/api/highlights`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeaders()) },
+      body: JSON.stringify({ verseFingerprint, color, style }),
+    }),
+  );
+  return body.highlight;
+}
+
+// Remove the current user's highlight for a verse. Auth. Idempotent.
+export async function deleteHighlight(verseFingerprint: string): Promise<void> {
+  await handle(
+    await fetch(`${API_URL}/api/highlights/${encodeURIComponent(verseFingerprint)}`, {
+      method: "DELETE",
+      headers: await authHeaders(),
+    }),
+  );
 }
 
 // POST a reply to an answer. Auth.

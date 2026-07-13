@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { fetchVerse, type VerseData } from "../lib/api";
+import { useTheme } from "../context/ThemeContext";
 
 // ── NDH source metadata (Documentary Hypothesis) ────────────────────────────────
 const NDH: Record<string, { name: string; era: string; colour: string }> = {
@@ -50,12 +51,51 @@ function Paragraphs({ text, color }: { text: string; color: string }) {
   );
 }
 
+// ── Theme-aware palette for the two card "moods" this page alternates between:
+// cosmic (cinematic scene, theology, timelines, science) and parchment (scholar's
+// conclusion, word study). Both moods exist in either app theme — only their exact
+// tones shift, so the page always tracks the light/dark toggle instead of being
+// permanently pinned to the dark "night sky" look.
+function useDeepReadPalette() {
+  const { theme } = useTheme();
+  const isDark = theme !== "light";
+  return {
+    isDark,
+    pageBg: "rgb(var(--color-ink))",
+    pageText: "rgb(var(--color-parchment))",
+    heroGradient: isDark
+      ? "radial-gradient(circle at 30% 20%, #160d2e, #07040f 70%)"
+      : "radial-gradient(circle at 30% 20%, #efe6d6, #e7dfce 70%)",
+    backLink: isDark ? "#9985c4" : "#6b4fa0",
+    cosmicCard: isDark
+      ? { background: "#0f0b1e", border: "1px solid rgba(83,74,183,0.25)" }
+      : { background: "#f2eef8", border: "1px solid rgba(83,74,183,0.25)" },
+    cosmicLabel: isDark ? "#9985c4" : "#6b4fa0",
+    cosmicText: isDark ? "#ddd5f0" : "#3d3560",
+    cosmicTextDim: isDark ? "#b6abd6" : "#5c4f80",
+    creamCard: isDark
+      ? { background: "#fffef9", border: "1px solid #e0d8c8" }
+      : { background: "#fffef9", border: "1px solid #c9bfa8" },
+    creamLabel: "#888",
+    creamText: "#1a1209",
+    creamTextDim: "#3a3020",
+    nightCard: isDark
+      ? { background: "#141019", border: "1px solid #2a2336" }
+      : { background: "#f5f2fa", border: "1px solid #ddd4ec" },
+    detailLabel: isDark ? "#7a7088" : "#8a7fa0",
+    detailText: isDark ? "#cfc7dc" : "#453a5c",
+    navDim: isDark ? "#3a3450" : "#c9c0da",
+    navDimBorder: isDark ? "#221c33" : "#e0d9ec",
+  };
+}
+
 export default function VerseReaderPage() {
   const { book = "genesis", chapter = "1", verse = "1" } = useParams();
   const navigate = useNavigate();
   const [data, setData] = useState<VerseData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const pal = useDeepReadPalette();
 
   useEffect(() => {
     setLoading(true);
@@ -67,11 +107,11 @@ export default function VerseReaderPage() {
   }, [book, chapter, verse]);
 
   if (loading) {
-    return <div style={{ minHeight: "100vh", background: "#07040f", color: "#9985c4", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading verse…</div>;
+    return <div style={{ minHeight: "100vh", background: pal.pageBg, color: pal.backLink, display: "flex", alignItems: "center", justifyContent: "center" }}>Loading verse…</div>;
   }
   if (error || !data) {
     return (
-      <div style={{ minHeight: "100vh", background: "#07040f", color: "#9985c4", display: "flex", flexDirection: "column", gap: 16, alignItems: "center", justifyContent: "center" }}>
+      <div style={{ minHeight: "100vh", background: pal.pageBg, color: pal.backLink, display: "flex", flexDirection: "column", gap: 16, alignItems: "center", justifyContent: "center" }}>
         <p>{error ?? "Verse not found."}</p>
         <button onClick={() => navigate("/codex")} style={{ color: "#C9A84C", background: "none", border: "1px solid rgba(201,168,76,0.4)", borderRadius: 20, padding: "6px 16px", cursor: "pointer" }}>← Back to Codex</button>
       </div>
@@ -83,11 +123,11 @@ export default function VerseReaderPage() {
   const vNum = data.verse;
 
   return (
-    <div style={{ minHeight: "100vh", background: "#07040f", color: "#f0ead8", paddingBottom: "4rem" }}>
-      {/* Hero — night sky */}
-      <div style={{ background: "radial-gradient(circle at 30% 20%, #160d2e, #07040f 70%)", padding: "2.5rem 1.25rem 3rem" }}>
+    <div style={{ minHeight: "100vh", background: pal.pageBg, color: pal.pageText, paddingBottom: "4rem" }}>
+      {/* Hero — night sky (dark) / soft daylight (light) */}
+      <div style={{ background: pal.heroGradient, padding: "2.5rem 1.25rem 3rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <button onClick={() => navigate("/codex")} style={{ color: "#9985c4", background: "none", border: "none", cursor: "pointer", fontSize: 12, marginBottom: "1.5rem" }}>← Codex</button>
+          <button onClick={() => navigate("/codex")} style={{ color: pal.backLink, background: "none", border: "none", cursor: "pointer", fontSize: 12, marginBottom: "1.5rem" }}>← Codex</button>
 
           <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C9A84C", marginBottom: "1rem" }}>
             {data.book} · Chapter {data.chapter} · Verse {vNum}
@@ -102,7 +142,7 @@ export default function VerseReaderPage() {
           )}
 
           {/* OSR verse line */}
-          <p style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", lineHeight: 1.9, color: "#f0ead8", borderLeft: `2px solid ${src?.colour ?? "#C9A84C"}`, paddingLeft: "1.1rem" }}>
+          <p style={{ fontFamily: "Georgia, serif", fontSize: "1.6rem", lineHeight: 1.9, color: pal.pageText, borderLeft: `2px solid ${src?.colour ?? "#C9A84C"}`, paddingLeft: "1.1rem" }}>
             <DivineText text={data.osrText} />
           </p>
         </div>
@@ -113,14 +153,14 @@ export default function VerseReaderPage() {
         {/* OSR Commentary — cinematic scene + scholar's conclusion */}
         {j.osr_commentary && (
           <>
-            <div style={{ ...card, background: "#0f0b1e", border: "1px solid rgba(83,74,183,0.25)" }}>
-              <div style={{ ...jarLabel, color: "#9985c4" }}>✦ Cinematic Scene</div>
-              <Paragraphs text={j.osr_commentary.cinematic_scene} color="#ddd5f0" />
+            <div style={{ ...card, ...pal.cosmicCard }}>
+              <div style={{ ...jarLabel, color: pal.cosmicLabel }}>✦ Cinematic Scene</div>
+              <Paragraphs text={j.osr_commentary.cinematic_scene} color={pal.cosmicText} />
             </div>
-            <div style={{ ...card, background: "#fffef9", border: "1px solid #e0d8c8" }}>
-              <div style={{ ...jarLabel, color: "#888" }}>Scholar’s Conclusion</div>
+            <div style={{ ...card, ...pal.creamCard }}>
+              <div style={{ ...jarLabel, color: pal.creamLabel }}>Scholar’s Conclusion</div>
               {j.osr_commentary.scholars_conclusion.split("\n\n").map((p: string, i: number) => (
-                <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, fontStyle: "italic", lineHeight: 2, color: "#1a1209", marginBottom: "1rem" }}>
+                <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, fontStyle: "italic", lineHeight: 2, color: pal.creamText, marginBottom: "1rem" }}>
                   <DivineText text={p} />
                 </p>
               ))}
@@ -130,10 +170,10 @@ export default function VerseReaderPage() {
 
         {/* Theology — prevailing verse */}
         {j.theology && (
-          <div style={{ ...card, background: "#0f0b1e", border: "1px solid rgba(83,74,183,0.25)" }}>
-            <div style={{ ...jarLabel, color: "#9985c4" }}>Theology — God-concept vs. Yeshua’s standard</div>
-            <p style={{ fontSize: 14, lineHeight: 1.9, color: "#ddd5f0", marginBottom: "0.75rem" }}>{j.theology.god_concept}</p>
-            <p style={{ fontSize: 13.5, lineHeight: 1.9, color: "#b6abd6", marginBottom: "1.25rem" }}>{j.theology.film_assessment}</p>
+          <div style={{ ...card, ...pal.cosmicCard }}>
+            <div style={{ ...jarLabel, color: pal.cosmicLabel }}>Theology — God-concept vs. Yeshua’s standard</div>
+            <p style={{ fontSize: 14, lineHeight: 1.9, color: pal.cosmicText, marginBottom: "0.75rem" }}>{j.theology.god_concept}</p>
+            <p style={{ fontSize: 13.5, lineHeight: 1.9, color: pal.cosmicTextDim, marginBottom: "1.25rem" }}>{j.theology.film_assessment}</p>
             {j.theology.prevailing_verse_ref && (
               <div style={{ background: "#051409", borderRadius: 12, padding: "1.25rem", border: "1px solid rgba(29,158,117,0.35)" }}>
                 <div style={{ ...jarLabel, color: "#1D9E75" }}>The prevailing word — {j.theology.prevailing_verse_ref}</div>
@@ -148,15 +188,15 @@ export default function VerseReaderPage() {
 
         {/* Word study */}
         {j.word_study?.words?.length > 0 && (
-          <div style={{ ...card, background: "#fffef9", border: "1px solid #e0d8c8" }}>
-            <div style={{ ...jarLabel, color: "#888" }}>Word Study</div>
+          <div style={{ ...card, ...pal.creamCard }}>
+            <div style={{ ...jarLabel, color: pal.creamLabel }}>Word Study</div>
             {j.word_study.words.map((w: any, i: number) => (
               <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: i < j.word_study.words.length - 1 ? "1px solid #efe9dc" : "none" }}>
                 <div style={{ minWidth: 64, fontFamily: "Georgia, serif", fontSize: "1.3rem", color: "#534AB7", direction: "rtl", textAlign: "right" }}>{w.hebrew}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontStyle: "italic", color: "#888" }}>{w.transliteration}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: "#1a1209", marginBottom: 4 }}>{w.meaning}</div>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.7, color: "#3a3020" }}>{w.note}</div>
+                  <div style={{ fontSize: 10, fontStyle: "italic", color: pal.creamLabel }}>{w.transliteration}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: pal.creamText, marginBottom: 4 }}>{w.meaning}</div>
+                  <div style={{ fontSize: 12.5, lineHeight: 1.7, color: pal.creamTextDim }}>{w.note}</div>
                 </div>
               </div>
             ))}
@@ -165,7 +205,7 @@ export default function VerseReaderPage() {
 
         {/* Writing timeline */}
         {j.writing_timeline && (
-          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+          <div style={{ ...card, ...pal.nightCard }}>
             <div style={{ ...jarLabel, color: "#C9A84C" }}>When &amp; why it was written</div>
             <Detail k="Period" v={j.writing_timeline.writing_period} />
             <Detail k="Source" v={j.writing_timeline.ndh_source_full} />
@@ -178,7 +218,7 @@ export default function VerseReaderPage() {
 
         {/* Event timeline */}
         {j.event_timeline && (
-          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+          <div style={{ ...card, ...pal.nightCard }}>
             <div style={{ ...jarLabel, color: "#C9A84C" }}>When the events happened</div>
             <Detail k="Period" v={j.event_timeline.event_period} />
             <Detail k="World" v={j.event_timeline.event_world} />
@@ -188,7 +228,7 @@ export default function VerseReaderPage() {
 
         {/* Science */}
         {j.science && (
-          <div style={{ ...card, background: "#141019", border: "1px solid #2a2336" }}>
+          <div style={{ ...card, ...pal.nightCard }}>
             <div style={{ ...jarLabel, color: "#378ADD" }}>Science layer{typeof j.science.alignment_score === "number" ? ` · alignment ${j.science.alignment_score}/10` : ""}</div>
             <Detail k="Ancient cosmology" v={j.science.ancient_cosmology} />
             <Detail k="Honest bridge" v={j.science.honest_bridge} />
@@ -197,16 +237,16 @@ export default function VerseReaderPage() {
 
         {/* No jars yet */}
         {Object.keys(j).length === 0 && (
-          <div style={{ ...card, background: "#0f0b1e", border: "1px dashed rgba(153,133,196,0.3)", textAlign: "center" }}>
-            <p style={{ color: "#9985c4", fontSize: 13.5 }}>Deep commentary for this verse is coming soon.</p>
-            <p style={{ color: "#6a5f86", fontSize: 11.5, marginTop: 6 }}>(Sample commentary is currently authored for Genesis 1:1.)</p>
+          <div style={{ ...card, ...pal.cosmicCard, borderStyle: "dashed", textAlign: "center" }}>
+            <p style={{ color: pal.cosmicLabel, fontSize: 13.5 }}>Deep commentary for this verse is coming soon.</p>
+            <p style={{ color: pal.cosmicTextDim, fontSize: 11.5, marginTop: 6 }}>(Sample commentary is currently authored for Genesis 1:1.)</p>
           </div>
         )}
 
         {/* Verse navigation */}
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "1.5rem" }}>
-          <button disabled={vNum <= 1} onClick={() => navigate(`/codex/${book}/${chapter}/${vNum - 1}`)} style={navBtn(vNum <= 1)}>← Verse {vNum - 1}</button>
-          <button onClick={() => navigate(`/codex/${book}/${chapter}/${vNum + 1}`)} style={navBtn(false)}>Verse {vNum + 1} →</button>
+          <button disabled={vNum <= 1} onClick={() => navigate(`/codex/${book}/${chapter}/${vNum - 1}`)} style={navBtn(vNum <= 1, pal)}>← Verse {vNum - 1}</button>
+          <button onClick={() => navigate(`/codex/${book}/${chapter}/${vNum + 1}`)} style={navBtn(false, pal)}>Verse {vNum + 1} →</button>
         </div>
       </div>
     </div>
@@ -214,19 +254,20 @@ export default function VerseReaderPage() {
 }
 
 function Detail({ k, v, accent }: { k: string; v?: string; accent?: boolean }) {
+  const pal = useDeepReadPalette();
   if (!v) return null;
   return (
     <div style={{ marginBottom: "0.85rem" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: accent ? "#C9A84C" : "#7a7088", marginBottom: 3 }}>{k}</div>
-      <div style={{ fontSize: 13.5, lineHeight: 1.8, color: accent ? "#e7d6a8" : "#cfc7dc" }}>{v}</div>
+      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: accent ? "#C9A84C" : pal.detailLabel, marginBottom: 3 }}>{k}</div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.8, color: accent ? "#e7d6a8" : pal.detailText }}>{v}</div>
     </div>
   );
 }
 
-function navBtn(disabled: boolean): React.CSSProperties {
+function navBtn(disabled: boolean, pal: ReturnType<typeof useDeepReadPalette>): React.CSSProperties {
   return {
-    fontSize: 12, color: disabled ? "#3a3450" : "#9985c4", background: "none",
-    border: `1px solid ${disabled ? "#221c33" : "rgba(153,133,196,0.4)"}`, borderRadius: 20,
+    fontSize: 12, color: disabled ? pal.navDim : pal.backLink, background: "none",
+    border: `1px solid ${disabled ? pal.navDimBorder : "rgba(153,133,196,0.4)"}`, borderRadius: 20,
     padding: "6px 14px", cursor: disabled ? "default" : "pointer",
   };
 }

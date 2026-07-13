@@ -7,6 +7,7 @@ import AuthModal from "./AuthModal";
 const tabs = [
   { path: "/home", label: "Today", icon: "✦" },
   { path: "/codex", label: "Codex", icon: "📜" },
+  { path: "/etu", label: "ETU", icon: "🎓" },
   { path: "/profile", label: "Profile", icon: "◎" },
 ];
 

@@ -1,7 +1,14 @@
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
-import { fetchChapter } from "../lib/api";
+import {
+  fetchChapter,
+  fetchHighlights,
+  saveHighlight,
+  deleteHighlight,
+  type Highlight,
+} from "../lib/api";
+import { useAuth } from "../context/AuthContext";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Eastern Theology University · ISR Bible Reader
@@ -63,12 +70,44 @@ const NEW_TESTAMENT: Book[] = [
 
 type Lang = "both" | "en" | "ml";
 
+// ── Highlighter palette + helpers ───────────────────────────────────────────────
+// Six presets tuned to read well on the ETU parchment background; the colour wheel
+// covers everything else.
+const SWATCHES = ["#F5C542", "#7FC29B", "#6FB3D6", "#E39BC7", "#E88B6B", "#B79BE3"];
+
+// Arbitrary hex (from a swatch or the colour wheel) → rgba, so a highlight fill can be
+// laid at a readable opacity over the verse text without hiding it.
+function withAlpha(hex: string, a: number): string {
+  let h = hex.replace("#", "");
+  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  const r = parseInt(h.slice(0, 2), 16);
+  const g = parseInt(h.slice(2, 4), 16);
+  const b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+// Style applied to a verse's text block from its highlight (if any).
+function hlTextStyle(hl?: Highlight): React.CSSProperties {
+  if (!hl) return {};
+  if (hl.style === "underline") {
+    return { borderBottom: `3px solid ${hl.color}`, paddingBottom: 3 };
+  }
+  return {
+    background: withAlpha(hl.color, 0.4),
+    borderRadius: 5,
+    padding: "0.1em 0.25em",
+    boxDecorationBreak: "clone",
+    WebkitBoxDecorationBreak: "clone",
+  };
+}
+
 // Rendering-shape verse — mapped from the API's ChapterVerse so the JSX below barely
 // had to change when this page moved off the static file.
 interface DisplayVerse {
   number: number;
   english: string;
   malayalam: string;
+  fingerprint: string | null; // stable id highlights key off; null → not highlightable
 }
 
 export default function ETUReaderPage() {
@@ -90,6 +129,17 @@ export default function ETUReaderPage() {
   const [loading, setLoading] = useState(true);
   const [verses, setVerses] = useState<DisplayVerse[] | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+
+  const { user } = useAuth();
+  // This chapter's highlights, keyed by verse fingerprint, for O(1) lookup while rendering.
+  const [highlights, setHighlights] = useState<Record<string, Highlight>>({});
+  // Fingerprint of the verse whose highlight toolbar is open (null = closed).
+  const [activeFp, setActiveFp] = useState<string | null>(null);
+  // Which style the next colour pick applies. Seeded from the verse's existing highlight.
+  const [pickStyle, setPickStyle] = useState<"highlight" | "underline">("highlight");
+  // "My Highlights" slide-over.
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [allHighlights, setAllHighlights] = useState<Highlight[] | null>(null);
 
   const books = testament === "old" ? OLD_TESTAMENT : NEW_TESTAMENT;
   const activeBook =
@@ -114,6 +164,7 @@ export default function ETUReaderPage() {
                 number: v.verseNumber,
                 english: v.osrText,
                 malayalam: v.translations.ml ?? "",
+                fingerprint: v.verseFingerprint,
               }))
             : null,
         );
@@ -128,6 +179,91 @@ export default function ETUReaderPage() {
       cancelled = true;
     };
   }, [book, chapter]);
+
+  // Load this user's highlights for the chapter whenever the chapter (or auth) changes.
+  // Signed-out readers get an empty map and no highlight UI.
+  useEffect(() => {
+    if (!user) {
+      setHighlights({});
+      return;
+    }
+    let cancelled = false;
+    fetchHighlights({ book, chapter })
+      .then((list) => {
+        if (cancelled) return;
+        const map: Record<string, Highlight> = {};
+        for (const h of list) map[h.verseFingerprint] = h;
+        setHighlights(map);
+      })
+      .catch(() => {
+        /* non-fatal: reading still works without highlights */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [book, chapter, user]);
+
+  // Close any open highlight toolbar when the chapter changes.
+  useEffect(() => {
+    setActiveFp(null);
+  }, [book, chapter]);
+
+  // Apply (create/update) a highlight — optimistic, reverts on failure.
+  async function applyHighlight(v: DisplayVerse, color: string, style: "highlight" | "underline") {
+    if (!v.fingerprint) return;
+    const fp = v.fingerprint;
+    const prev = highlights[fp];
+    const optimistic: Highlight = {
+      verseFingerprint: fp, book, chapter, verse: v.number, color, style, updatedAt: "",
+    };
+    setHighlights((h) => ({ ...h, [fp]: optimistic }));
+    try {
+      const saved = await saveHighlight(fp, color, style);
+      setHighlights((h) => ({ ...h, [fp]: saved }));
+    } catch {
+      setHighlights((h) => {
+        const next = { ...h };
+        if (prev) next[fp] = prev;
+        else delete next[fp];
+        return next;
+      });
+    }
+  }
+
+  // Remove a highlight — optimistic, reverts on failure.
+  async function removeHighlight(fp: string) {
+    const prev = highlights[fp];
+    setHighlights((h) => {
+      const next = { ...h };
+      delete next[fp];
+      return next;
+    });
+    setActiveFp(null);
+    try {
+      await deleteHighlight(fp);
+    } catch {
+      if (prev) setHighlights((h) => ({ ...h, [fp]: prev }));
+    }
+  }
+
+  // Open the highlight toolbar for a verse (seeding the style toggle from any existing
+  // highlight). No-op when signed out or the verse has no fingerprint.
+  function openToolbar(v: DisplayVerse) {
+    if (!user || !v.fingerprint) return;
+    setPickStyle(highlights[v.fingerprint]?.style ?? "highlight");
+    setActiveFp((cur) => (cur === v.fingerprint ? null : v.fingerprint));
+  }
+
+  // Open the "My Highlights" panel and (re)load the full list.
+  function openPanel() {
+    setPanelOpen(true);
+    setAllHighlights(null);
+    fetchHighlights()
+      .then(setAllHighlights)
+      .catch(() => setAllHighlights([]));
+  }
+
+  const activeVerse = activeFp ? verses?.find((v) => v.fingerprint === activeFp) ?? null : null;
 
   // Reset scroll when the chapter changes.
   useEffect(() => {
@@ -209,6 +345,9 @@ export default function ETUReaderPage() {
           ))}
         </div>
 
+        {user && (
+          <button onClick={openPanel} style={iconBtn} title="My highlights" aria-label="My highlights">🖍️</button>
+        )}
         <button onClick={() => navigate("/home")} style={iconBtn} title="Back to Original Script">↩</button>
       </header>
 
@@ -301,14 +440,19 @@ export default function ETUReaderPage() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ root: mainRef, amount: 0.55 }}
                     transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                    style={{ maxWidth: 720, position: "relative", zIndex: 1 }}>
+                    onClick={() => openToolbar(v)}
+                    style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: user && v.fingerprint ? "pointer" : "default" }}>
                     <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
                     {lang !== "ml" && (
-                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>{v.english}</p>
+                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>
+                        <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
+                      </p>
                     )}
                     {lang !== "en" && (
                       v.malayalam
-                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText, marginTop: lang === "both" ? "1.5rem" : 0 }}>{v.malayalam}</p>
+                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText, marginTop: lang === "both" ? "1.5rem" : 0 }}>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.malayalam}</span>
+                          </p>
                         : lang === "ml"
                           ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
                           : null
@@ -352,15 +496,20 @@ export default function ETUReaderPage() {
                   const highlighted = jumpVerse === v.number;
                   return (
                     <div key={v.number} id={`v-${v.number}`}
-                      style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s" }}>
+                      onClick={() => openToolbar(v)}
+                      style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s", cursor: user && v.fingerprint ? "pointer" : "default" }}>
                       <span style={{ color: C.emerald, fontSize: 12, fontWeight: 700, minWidth: 22, textAlign: "right", paddingTop: 5, fontFamily: SERIF }}>{v.number}</span>
                       <div style={{ flex: 1 }}>
                         {lang !== "ml" && (
-                          <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink }}>{v.english}</p>
+                          <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink }}>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
+                          </p>
                         )}
                         {lang !== "en" && (
                           v.malayalam
-                            ? <p style={{ fontFamily: ML, fontSize: 16.5, lineHeight: 2, color: C.mlText, marginTop: lang === "both" ? 6 : 0 }}>{v.malayalam}</p>
+                            ? <p style={{ fontFamily: ML, fontSize: 16.5, lineHeight: 2, color: C.mlText, marginTop: lang === "both" ? 6 : 0 }}>
+                                <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.malayalam}</span>
+                              </p>
                             : lang === "ml"
                               ? <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
                               : null
@@ -397,6 +546,112 @@ export default function ETUReaderPage() {
         </main>
         )}
       </div>
+
+      {/* ── Highlight toolbar (appears when a verse is tapped) ── */}
+      {activeVerse && activeVerse.fingerprint && (
+        <>
+          {/* click-away backdrop */}
+          <div onClick={() => setActiveFp(null)} style={{ position: "fixed", inset: 0, zIndex: 40 }} />
+          <div style={{
+            position: "fixed", left: "50%", bottom: "1.25rem", transform: "translateX(-50%)", zIndex: 41,
+            background: C.paper, border: `1px solid ${C.panelEdge}`, borderRadius: 16,
+            boxShadow: "0 10px 40px rgba(51,41,27,0.28)", padding: "0.85rem 1rem",
+            display: "flex", flexDirection: "column", gap: "0.7rem", width: "min(420px, calc(100vw - 2rem))",
+          }}>
+            {/* header row */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <span style={{ fontFamily: SERIF, fontSize: 13, fontWeight: 700, color: C.emeraldD }}>
+                {book} {chapter}:{activeVerse.number}
+              </span>
+              <button onClick={() => setActiveFp(null)} style={{ border: "none", background: "none", cursor: "pointer", color: C.inkFaint, fontSize: 18, lineHeight: 1 }} aria-label="Close">×</button>
+            </div>
+
+            {/* style toggle */}
+            <div style={{ display: "flex", background: C.panel, borderRadius: 12, padding: 3, gap: 2 }}>
+              {([["highlight", "🖍 Highlight"], ["underline", "⎁ Underline"]] as const).map(([val, label]) => (
+                <button key={val} onClick={() => setPickStyle(val)}
+                  style={{ flex: 1, border: "none", cursor: "pointer", borderRadius: 10, padding: "6px 10px", fontSize: 12, fontWeight: 600, fontFamily: SERIF, background: pickStyle === val ? C.emerald : "transparent", color: pickStyle === val ? C.paper : C.inkSoft }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {/* swatches + colour wheel + remove */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+              {SWATCHES.map((c) => {
+                const selected = highlights[activeVerse.fingerprint!]?.color?.toLowerCase() === c.toLowerCase();
+                return (
+                  <button key={c} onClick={() => applyHighlight(activeVerse, c, pickStyle)} title={c}
+                    style={{ width: 30, height: 30, borderRadius: "50%", background: c, cursor: "pointer",
+                      border: selected ? `3px solid ${C.emeraldD}` : `2px solid ${C.panelEdge}` }} />
+                );
+              })}
+              {/* colour wheel */}
+              <label title="Custom colour" style={{ width: 30, height: 30, borderRadius: "50%", cursor: "pointer",
+                border: `2px solid ${C.panelEdge}`, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                background: "conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)", position: "relative", overflow: "hidden" }}>
+                <input type="color"
+                  defaultValue={highlights[activeVerse.fingerprint!]?.color ?? "#F5C542"}
+                  onChange={(e) => applyHighlight(activeVerse, e.target.value, pickStyle)}
+                  style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", border: "none", padding: 0 }} />
+              </label>
+
+              <div style={{ flex: 1 }} />
+
+              {highlights[activeVerse.fingerprint] && (
+                <button onClick={() => removeHighlight(activeVerse.fingerprint!)}
+                  style={{ border: `1px solid ${C.panelEdge}`, background: "transparent", cursor: "pointer", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 600, fontFamily: SERIF, color: "#A52B1E" }}>
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── My Highlights panel ── */}
+      {panelOpen && (
+        <>
+          <div onClick={() => setPanelOpen(false)} style={{ position: "fixed", inset: 0, background: "rgba(51,41,27,0.35)", zIndex: 50 }} />
+          <aside style={{ position: "fixed", top: 0, right: 0, bottom: 0, width: "min(380px, 88vw)", background: C.paper,
+            borderLeft: `1px solid ${C.panelEdge}`, zIndex: 51, display: "flex", flexDirection: "column", boxShadow: "-8px 0 40px rgba(51,41,27,0.25)" }}>
+            <div style={{ padding: "1.1rem 1.25rem", borderBottom: `1px solid ${C.panelEdge}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div>
+                <div style={{ fontFamily: HEAD, fontSize: 18, fontWeight: 600, color: C.ink }}>My Highlights</div>
+                <div style={{ fontSize: 11, color: C.inkFaint, letterSpacing: "0.04em" }}>
+                  {allHighlights == null ? "Loading…" : `${allHighlights.length} verse${allHighlights.length === 1 ? "" : "s"}`}
+                </div>
+              </div>
+              <button onClick={() => setPanelOpen(false)} style={{ ...iconBtn, background: C.panel, color: C.inkSoft, border: `1px solid ${C.panelEdge}` }} aria-label="Close">×</button>
+            </div>
+            <div style={{ flex: 1, overflowY: "auto", padding: "0.75rem" }}>
+              {allHighlights == null ? (
+                <div style={{ textAlign: "center", padding: "3rem 1rem", color: C.inkFaint, fontStyle: "italic" }}>Loading…</div>
+              ) : allHighlights.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "3rem 1rem", color: C.inkFaint }}>
+                  <div style={{ fontSize: 30, marginBottom: "0.6rem" }}>🖍️</div>
+                  <p style={{ fontFamily: HEAD, fontStyle: "italic", fontSize: 16, color: C.inkSoft }}>No highlights yet.</p>
+                  <p style={{ fontSize: 13, marginTop: 4 }}>Tap any verse to highlight it.</p>
+                </div>
+              ) : (
+                allHighlights.map((h) => (
+                  <button key={h.verseFingerprint}
+                    onClick={() => { setPanelOpen(false); navigate(`/etu/${h.book.toLowerCase()}/${h.chapter}/${h.verse}`); }}
+                    style={{ width: "100%", textAlign: "left", cursor: "pointer", border: `1px solid ${C.panelEdge}`, background: C.panel,
+                      borderRadius: 10, padding: "0.7rem 0.85rem", marginBottom: 6, display: "flex", alignItems: "center", gap: 10 }}>
+                    <span style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                      background: h.style === "underline" ? "transparent" : h.color,
+                      borderBottom: h.style === "underline" ? `4px solid ${h.color}` : undefined,
+                      border: h.style === "underline" ? undefined : `1px solid ${C.panelEdge}` }} />
+                    <span style={{ fontFamily: SERIF, fontSize: 14, color: C.ink }}>{h.book} {h.chapter}:{h.verse}</span>
+                    <span style={{ marginLeft: "auto", fontSize: 10, color: C.inkFaint, textTransform: "uppercase", letterSpacing: "0.06em" }}>{h.style}</span>
+                  </button>
+                ))
+              )}
+            </div>
+          </aside>
+        </>
+      )}
 
       {/* Responsive: hide sidebar toggle on desktop, hide static sidebar on mobile */}
       <style>{`

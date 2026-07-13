@@ -19,12 +19,16 @@
 }
 
 [data-theme="light"] {
-  /* Light theme — aged parchment / daylight manuscript aesthetic */
-  --color-ink:        245 240 232;    /* #F5F0E8  cream background         */
+  /* Light theme — aged parchment / daylight manuscript aesthetic.
+     Kept a shade below "paper white" (#E7DFCE, not #F5F0E8) — a full jump to
+     near-white directly out of the near-black dark background read as a harsh
+     flash, since a 0.25s background-color transition can't soften that large
+     a luminance jump on its own. */
+  --color-ink:        231 223 206;    /* #E7DFCE  warm parchment background */
   --color-parchment:  28 24 14;       /* #1C180E  dark sepia text          */
   --color-gold:       139 94 26;      /* #8B5E1A  richer gold on light bg  */
   --color-gold-light: 160 114 32;     /* #A07220  lighter variant          */
-  --color-slate:      235 228 215;    /* #EBE4D7  warm off-white cards     */
+  --color-slate:      221 212 193;    /* #DDD4C1  warm off-white cards     */
   --color-ember:      165 43 30;      /* #A52B1E  deeper red on light bg   */
 }
 
@@ -33,12 +37,12 @@
 html, body {
   background-color: rgb(var(--color-ink));
   color: rgb(var(--color-parchment));
-  transition: background-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out;
 }
 
 /* Smooth theme transition for every element */
 *, *::before, *::after {
-  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+  transition: background-color 0.4s ease-in-out, border-color 0.4s ease-in-out, color 0.4s ease-in-out;
 }
 
 /* Exception: don't transition transforms/opacity (breaks animations) */
