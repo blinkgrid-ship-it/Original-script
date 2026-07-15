@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { useNavigate, useParams } from "react-router-dom";
 import {
@@ -68,13 +68,20 @@ const NEW_TESTAMENT: Book[] = [
   { name: "3 John", chapters: 1 }, { name: "Jude", chapters: 1 }, { name: "Revelation", chapters: 22 },
 ];
 
-type Lang = "both" | "en" | "ml";
+// "regional" is a display-mode sentinel (show whichever regional language is
+// selected), not a language code itself — the actual code lives in `regionalLang`
+// state below, so the third pill can point at any imported language.
+type Lang = "both" | "en" | "regional";
 
-// Regional languages selectable from the third pill. Only Malayalam has real content
-// today — add an entry here (and wire its data through fetchChapter) to offer another.
-const REGIONAL_LANGUAGES = [{ code: "ml", label: "മലയാളം" }];
-function activeRegionalLabel(code: string): string {
-  return REGIONAL_LANGUAGES.find((l) => l.code === code)?.label ?? "ML";
+// English display names for known ISO 639-1 codes, since the reader (you) can't read
+// the native scripts to tell them apart at a glance. Unknown codes just show as-is
+// (uppercased) rather than breaking — add a name here as new languages get imported.
+const LANGUAGE_NAMES: Record<string, string> = {
+  ml: "Malayalam", ta: "Tamil", hi: "Hindi", te: "Telugu", kn: "Kannada",
+  bn: "Bengali", gu: "Gujarati", mr: "Marathi", pa: "Punjabi", ur: "Urdu",
+};
+function languageLabel(code: string): string {
+  return LANGUAGE_NAMES[code] ?? code.toUpperCase();
 }
 
 // ── Highlighter palette + helpers ───────────────────────────────────────────────
@@ -113,7 +120,8 @@ function hlTextStyle(hl?: Highlight): React.CSSProperties {
 interface DisplayVerse {
   number: number;
   english: string;
-  malayalam: string;
+  // Keyed by ISO language code — whatever's actually been imported, not just Malayalam.
+  translations: Record<string, string>;
   fingerprint: string | null; // stable id highlights key off; null → not highlightable
 }
 
@@ -127,7 +135,7 @@ export default function ETUReaderPage() {
 
   const [testament, setTestament] = useState<"old" | "new">("old");
   const [lang, setLang] = useState<Lang>("both");
-  const [regionalLang, setRegionalLang] = useState(REGIONAL_LANGUAGES[0].code);
+  const [regionalLang, setRegionalLang] = useState("ml");
   // Scroll (immersive) is the default reading mode per the locked "mobile-first
   // scrolling UI" decision — Column stays available as an alternate view.
   const [readMode, setReadMode] = useState<"column" | "immersive">("immersive");
@@ -157,6 +165,22 @@ export default function ETUReaderPage() {
   const book = activeBook.name;
   const chapter = Math.min(Math.max(urlChapter, 1), activeBook.chapters);
 
+  // Every language actually present in this chapter's data — not a hardcoded list, so
+  // a newly imported language (Tamil, Hindi, ...) shows up in the picker automatically
+  // the moment its verse_translations rows exist, with no code change here.
+  const availableLanguages = useMemo(() => {
+    const codes = new Set<string>();
+    for (const v of verses ?? []) for (const code of Object.keys(v.translations)) codes.add(code);
+    return [...codes].sort();
+  }, [verses]);
+
+  // Keep the selected regional language valid as chapters change — falls back to
+  // whatever's actually available instead of silently showing nothing.
+  useEffect(() => {
+    if (availableLanguages.length === 0) return;
+    if (!availableLanguages.includes(regionalLang)) setRegionalLang(availableLanguages[0]);
+  }, [availableLanguages, regionalLang]);
+
   // Fetch this chapter from the real database (Verse + VerseTranslation) whenever the
   // URL's book/chapter changes. `verses: null` means either loading or genuinely no
   // content yet — both render the same "not uploaded" state, just gated by `loading`.
@@ -171,7 +195,7 @@ export default function ETUReaderPage() {
             ? data.verses.map((v) => ({
                 number: v.verseNumber,
                 english: v.osrText,
-                malayalam: v.translations.ml ?? "",
+                translations: v.translations,
                 fingerprint: v.verseFingerprint,
               }))
             : null,
@@ -339,33 +363,34 @@ export default function ETUReaderPage() {
           className="etu-search"
         />
 
-        {/* Language toggle — back to the original pill row. The third pill is now a
-            <select> in disguise instead of a hardcoded "ML" label, so it becomes
-            "pick whichever regional language" as more get added (currently only
-            Malayalam has content; REGIONAL_LANGUAGES is the one place to extend). */}
+        {/* Language toggle — the original pill row. The third pill is a <select> in
+            disguise, listing whatever languages availableLanguages actually finds in
+            this chapter's data — a newly imported language just appears here. */}
         <div style={{ display: "flex", background: "rgba(246,241,231,0.1)", borderRadius: 20, padding: 3, gap: 2 }} className="etu-lang">
           <button onClick={() => setLang("both")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "both" ? C.gold : "transparent", color: lang === "both" ? C.emeraldD : C.goldSoft }}>
-            EN + {activeRegionalLabel(regionalLang)}
+            EN + {languageLabel(regionalLang)}
           </button>
           <button onClick={() => setLang("en")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "en" ? C.gold : "transparent", color: lang === "en" ? C.emeraldD : C.goldSoft }}>
             EN
           </button>
-          <select
-            value={regionalLang}
-            onChange={(e) => { setRegionalLang(e.target.value); setLang("ml"); }}
-            aria-label="Regional language"
-            style={{
-              appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-              border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 20px 5px 12px",
-              fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF,
-              background: lang === "ml" ? C.gold : "transparent",
-              color: lang === "ml" ? C.emeraldD : C.goldSoft,
-            }}
-          >
-            {REGIONAL_LANGUAGES.map((l) => (
-              <option key={l.code} value={l.code} style={{ color: "#000" }}>{l.label}</option>
-            ))}
-          </select>
+          {availableLanguages.length > 0 && (
+            <select
+              value={regionalLang}
+              onChange={(e) => { setRegionalLang(e.target.value); setLang("regional"); }}
+              aria-label="Regional language"
+              style={{
+                appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+                border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 20px 5px 12px",
+                fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF,
+                background: lang === "regional" ? C.gold : "transparent",
+                color: lang === "regional" ? C.emeraldD : C.goldSoft,
+              }}
+            >
+              {availableLanguages.map((code) => (
+                <option key={code} value={code} style={{ color: "#000" }}>{languageLabel(code)}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         {/* Reading-mode toggle — Scroll is the default, so it's shown first (left). */}
@@ -473,18 +498,18 @@ export default function ETUReaderPage() {
                     onClick={() => openToolbar(v)}
                     style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: user && v.fingerprint ? "pointer" : "default" }}>
                     <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
-                    {lang !== "ml" && (
+                    {lang !== "regional" && (
                       <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>
                         <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
                       </p>
                     )}
                     {lang !== "en" && (
-                      v.malayalam
+                      v.translations[regionalLang]
                         ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText, marginTop: lang === "both" ? "1.5rem" : 0 }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.malayalam}</span>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.translations[regionalLang]}</span>
                           </p>
-                        : lang === "ml"
-                          ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
+                        : lang === "regional"
+                          ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
                           : null
                     )}
                   </motion.div>
@@ -530,18 +555,18 @@ export default function ETUReaderPage() {
                       style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s", cursor: user && v.fingerprint ? "pointer" : "default" }}>
                       <span style={{ color: C.emerald, fontSize: 12, fontWeight: 700, minWidth: 22, textAlign: "right", paddingTop: 5, fontFamily: SERIF }}>{v.number}</span>
                       <div style={{ flex: 1 }}>
-                        {lang !== "ml" && (
+                        {lang !== "regional" && (
                           <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink }}>
                             <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
                           </p>
                         )}
                         {lang !== "en" && (
-                          v.malayalam
+                          v.translations[regionalLang]
                             ? <p style={{ fontFamily: ML, fontSize: 16.5, lineHeight: 2, color: C.mlText, marginTop: lang === "both" ? 6 : 0 }}>
-                                <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.malayalam}</span>
+                                <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.translations[regionalLang]}</span>
                               </p>
-                            : lang === "ml"
-                              ? <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>Malayalam for this verse is being added by the editorial team.</p>
+                            : lang === "regional"
+                              ? <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
                               : null
                         )}
                       </div>
