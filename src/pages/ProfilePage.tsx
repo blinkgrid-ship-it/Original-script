@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import { mockAnswers, mockQuestions } from "../data/questionData";
+import { pathways } from "../data/onboardingData";
+import { postPathway } from "../lib/api";
 
 // ── localStorage helpers ─────────────────────────────────────────────────────
 
@@ -276,9 +278,18 @@ function ConstellationMap({
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, pathway: authPathway, markOnboarded, signOut } = useAuth();
 
-  const pathway = getPathway();
+  // authPathway (from GET /api/me) is the source of truth; localStorage is only a
+  // fallback while that lookup is still in flight.
+  const [pathway, setPathway] = useState(authPathway ?? getPathway());
+
+  useEffect(() => {
+    if (authPathway) setPathway(authPathway);
+  }, [authPathway]);
+
+  const [changingPathway, setChangingPathway] = useState(false);
+  const [savingPathway, setSavingPathway] = useState(false);
   const chaptersRead = getCodexRead();
   const conquestDone = getConquestDone();
   const wordsMastered = getWordsMastered();
@@ -316,6 +327,20 @@ export default function ProfilePage() {
     navigate("/");
   }
 
+  async function handlePathwayChange(pathwayId: string) {
+    setSavingPathway(true);
+    localStorage.setItem("os_pathway", pathwayId);
+    setPathway(pathwayId);
+    try {
+      await postPathway(pathwayId);
+    } catch {
+      /* offline — localStorage already updated, backend will catch up next call */
+    }
+    markOnboarded(pathwayId);
+    setSavingPathway(false);
+    setChangingPathway(false);
+  }
+
   return (
     <div className="min-h-screen bg-ink text-parchment pb-12">
 
@@ -347,9 +372,33 @@ export default function ProfilePage() {
             <p className="text-parchment/40 text-sm mb-3">{user?.email}</p>
 
             {/* Pathway badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-4">
+            <button
+              onClick={() => setChangingPathway((v) => !v)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-4 hover:bg-gold/20 transition-colors"
+            >
               ✦ {PATHWAY_LABELS[pathway] ?? pathway}
-            </div>
+              <span className="text-gold/50">{changingPathway ? "✕" : "change"}</span>
+            </button>
+
+            {changingPathway && (
+              <div className="max-w-sm mx-auto sm:mx-0 space-y-2 mb-4">
+                {pathways.map((p) => (
+                  <button
+                    key={p.id}
+                    disabled={savingPathway}
+                    onClick={() => handlePathwayChange(p.id)}
+                    className={`w-full border rounded-xl px-4 py-2.5 text-left transition-all flex items-center gap-3 disabled:opacity-50 ${
+                      pathway === p.id
+                        ? "border-gold bg-gold/5"
+                        : "border-parchment/10 hover:border-gold/40"
+                    }`}
+                  >
+                    <span className="text-lg">{p.icon}</span>
+                    <span className="text-parchment text-sm">{p.title}</span>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* XP progress bar */}
             {level.next && (

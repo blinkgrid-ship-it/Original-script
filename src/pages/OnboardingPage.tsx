@@ -2,12 +2,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { pathways } from "../data/onboardingData";
 import { postPathway } from "../lib/api";
-
-type Screen = "welcome" | "pathway";
+import { useAuth } from "../context/AuthContext";
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const [screen, setScreen] = useState<Screen>("welcome");
+  const { markOnboarded } = useAuth();
   const [selectedPathway, setSelectedPathway] = useState<string | null>(null);
 
   async function handlePathwaySelect(pathwayId: string) {
@@ -20,29 +19,8 @@ export default function OnboardingPage() {
     } catch {
       /* not signed in / offline — fall back to localStorage */
     }
-    navigate("/home");
-  }
-
-  if (screen === "welcome") {
-    return (
-      <div className="min-h-screen bg-ink flex flex-col items-center justify-center px-6 text-center">
-        <div className="max-w-sm">
-          <p className="text-6xl mb-6">📽</p>
-          <h1 className="text-4xl font-serif text-parchment mb-4 leading-tight">
-            Original Script
-          </h1>
-          <p className="text-parchment/50 text-base leading-relaxed mb-12">
-            Scripture as it was written. In the language it was spoken. With the depth it was meant to carry.
-          </p>
-          <button
-            onClick={() => setScreen("pathway")}
-            className="w-full py-4 bg-gold text-ink font-semibold rounded-xl hover:bg-gold-light transition-all text-sm uppercase tracking-wide"
-          >
-            Begin
-          </button>
-        </div>
-      </div>
-    );
+    markOnboarded(pathwayId);
+    navigate("/");
   }
 
   return (
@@ -78,12 +56,6 @@ export default function OnboardingPage() {
             </button>
           ))}
         </div>
-        <button
-          onClick={() => setScreen("welcome")}
-          className="mt-8 text-parchment/20 text-xs hover:text-parchment transition-colors block mx-auto text-center"
-        >
-          ← Back
-        </button>
       </div>
     </div>
   );

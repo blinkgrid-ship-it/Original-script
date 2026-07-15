@@ -1,5 +1,6 @@
-import { Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
+import { useEffect } from "react";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import OnboardingPage from "./pages/OnboardingPage";
 import LandingPage from "./pages/LandingPage";
@@ -19,10 +20,22 @@ import TopNav from "./component/TopNav";
 
 function AppRoutes() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { onboarded } = useAuth();
+
+  // First login after sign-up (pathway not yet chosen) bounces the user into
+  // /onboarding, once. Returning users with a pathway already set skip straight
+  // past it — this only fires for the new-user case, not every login.
+  useEffect(() => {
+    if (onboarded === false && location.pathname !== "/onboarding") {
+      navigate("/onboarding", { replace: true });
+    }
+  }, [onboarded, location.pathname, navigate]);
+
   // ETU and the admin portal are their own surfaces with their own chrome — hide the
   // Original Script nav there.
   const showNav =
-    location.pathname !== "/" &&
+    location.pathname !== "/onboarding" &&
     !location.pathname.startsWith("/etu") &&
     !location.pathname.startsWith("/admin");
 
@@ -30,8 +43,9 @@ function AppRoutes() {
     <>
       {showNav && <TopNav />}
       <Routes>
-        <Route path="/" element={<OnboardingPage />} />
-        <Route path="/home" element={<LandingPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/onboarding" element={<OnboardingPage />} />
+        <Route path="/home" element={<Navigate to="/" replace />} />
         <Route path="/question" element={<QuestionPage />} />
         <Route path="/codex" element={<CodexPage />} />
         <Route path="/codex/:book/:chapter/:verse" element={<VerseReaderPage />} />
