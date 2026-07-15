@@ -70,6 +70,13 @@ const NEW_TESTAMENT: Book[] = [
 
 type Lang = "both" | "en" | "ml";
 
+// Regional languages selectable from the third pill. Only Malayalam has real content
+// today — add an entry here (and wire its data through fetchChapter) to offer another.
+const REGIONAL_LANGUAGES = [{ code: "ml", label: "മലയാളം" }];
+function activeRegionalLabel(code: string): string {
+  return REGIONAL_LANGUAGES.find((l) => l.code === code)?.label ?? "ML";
+}
+
 // ── Highlighter palette + helpers ───────────────────────────────────────────────
 // Six presets tuned to read well on the ETU parchment background; the colour wheel
 // covers everything else.
@@ -120,6 +127,7 @@ export default function ETUReaderPage() {
 
   const [testament, setTestament] = useState<"old" | "new">("old");
   const [lang, setLang] = useState<Lang>("both");
+  const [regionalLang, setRegionalLang] = useState(REGIONAL_LANGUAGES[0].code);
   // Scroll (immersive) is the default reading mode per the locked "mobile-first
   // scrolling UI" decision — Column stays available as an alternate view.
   const [readMode, setReadMode] = useState<"column" | "immersive">("immersive");
@@ -331,25 +339,33 @@ export default function ETUReaderPage() {
           className="etu-search"
         />
 
-        {/* Language dropdown — a select rather than 3 pills, so adding a real second
-            language later (Tamil, Hindi, ...) is one more <option>, not a redesign. */}
-        <div style={{ position: "relative", display: "flex", alignItems: "center" }} className="etu-lang">
+        {/* Language toggle — back to the original pill row. The third pill is now a
+            <select> in disguise instead of a hardcoded "ML" label, so it becomes
+            "pick whichever regional language" as more get added (currently only
+            Malayalam has content; REGIONAL_LANGUAGES is the one place to extend). */}
+        <div style={{ display: "flex", background: "rgba(246,241,231,0.1)", borderRadius: 20, padding: 3, gap: 2 }} className="etu-lang">
+          <button onClick={() => setLang("both")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "both" ? C.gold : "transparent", color: lang === "both" ? C.emeraldD : C.goldSoft }}>
+            EN + {activeRegionalLabel(regionalLang)}
+          </button>
+          <button onClick={() => setLang("en")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "en" ? C.gold : "transparent", color: lang === "en" ? C.emeraldD : C.goldSoft }}>
+            EN
+          </button>
           <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value as Lang)}
-            aria-label="Language"
+            value={regionalLang}
+            onChange={(e) => { setRegionalLang(e.target.value); setLang("ml"); }}
+            aria-label="Regional language"
             style={{
               appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-              background: "rgba(246,241,231,0.1)", border: "1px solid rgba(246,241,231,0.2)",
-              borderRadius: 20, padding: "6px 28px 6px 14px", color: "#F6F1E7", fontSize: 11,
-              fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, cursor: "pointer",
+              border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 20px 5px 12px",
+              fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF,
+              background: lang === "ml" ? C.gold : "transparent",
+              color: lang === "ml" ? C.emeraldD : C.goldSoft,
             }}
           >
-            <option value="both" style={{ color: "#000" }}>Language: English + മലയാളം</option>
-            <option value="en" style={{ color: "#000" }}>Language: English</option>
-            <option value="ml" style={{ color: "#000" }}>Language: മലയാളം</option>
+            {REGIONAL_LANGUAGES.map((l) => (
+              <option key={l.code} value={l.code} style={{ color: "#000" }}>{l.label}</option>
+            ))}
           </select>
-          <span style={{ position: "absolute", right: 10, pointerEvents: "none", fontSize: 9, color: C.goldSoft }}>▾</span>
         </div>
 
         {/* Reading-mode toggle — Scroll is the default, so it's shown first (left). */}
