@@ -331,16 +331,30 @@ export default function ETUReaderPage() {
           className="etu-search"
         />
 
-        {/* Language toggle */}
-        <div style={{ display: "flex", background: "rgba(246,241,231,0.1)", borderRadius: 20, padding: 3, gap: 2 }}>
-          {([["both", "EN + ML"], ["en", "EN"], ["ml", "ML"]] as const).map(([val, label]) => (
-            <button key={val} onClick={() => setLang(val)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === val ? C.gold : "transparent", color: lang === val ? C.emeraldD : C.goldSoft }}>{label}</button>
-          ))}
+        {/* Language dropdown — a select rather than 3 pills, so adding a real second
+            language later (Tamil, Hindi, ...) is one more <option>, not a redesign. */}
+        <div style={{ position: "relative", display: "flex", alignItems: "center" }} className="etu-lang">
+          <select
+            value={lang}
+            onChange={(e) => setLang(e.target.value as Lang)}
+            aria-label="Language"
+            style={{
+              appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
+              background: "rgba(246,241,231,0.1)", border: "1px solid rgba(246,241,231,0.2)",
+              borderRadius: 20, padding: "6px 28px 6px 14px", color: "#F6F1E7", fontSize: 11,
+              fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, cursor: "pointer",
+            }}
+          >
+            <option value="both" style={{ color: "#000" }}>Language: English + മലയാളം</option>
+            <option value="en" style={{ color: "#000" }}>Language: English</option>
+            <option value="ml" style={{ color: "#000" }}>Language: മലയാളം</option>
+          </select>
+          <span style={{ position: "absolute", right: 10, pointerEvents: "none", fontSize: 9, color: C.goldSoft }}>▾</span>
         </div>
 
-        {/* Reading-mode toggle */}
+        {/* Reading-mode toggle — Scroll is the default, so it's shown first (left). */}
         <div style={{ display: "flex", background: "rgba(246,241,231,0.1)", borderRadius: 20, padding: 3, gap: 2 }} className="etu-mode">
-          {([["column", "☰ Column"], ["immersive", "⛶ Scroll"]] as const).map(([val, label]) => (
+          {([["immersive", "⛶ Scroll"], ["column", "☰ Column"]] as const).map(([val, label]) => (
             <button key={val} onClick={() => setReadMode(val)} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: readMode === val ? C.gold : "transparent", color: readMode === val ? C.emeraldD : C.goldSoft }}>{label}</button>
           ))}
         </div>
@@ -663,6 +677,7 @@ export default function ETUReaderPage() {
           .etu-sidebar[data-open] { display: flex !important; }
           .etu-search { width: 120px !important; }
           .etu-mode { display: none !important; }
+          .etu-lang select { max-width: 88px !important; padding-right: 20px !important; }
         }
       `}</style>
     </div>

@@ -139,11 +139,21 @@ export interface ChapterData {
   verses: ChapterVerse[];
 }
 
-// GET every verse in a chapter (OSR text, Hebrew, translations). Public. Real data —
-// no mock short-circuit, since this is what replaces the static ETU data file. Returns
-// `verses: []` for a book/chapter with no content yet (not an error).
+// GET every verse in a chapter (OSR text, Hebrew, translations). Public. Tries the real
+// backend first; if it's unreachable (e.g. the live site has no backend hosted yet —
+// see genesis1mock.ts), Genesis 1 falls back to a frozen real-content snapshot so the
+// deployed site isn't just empty. Any other book/chapter still surfaces the real error.
+// Returns `verses: []` for a book/chapter with no content yet (not an error).
 export async function fetchChapter(book: string, chapter: number | string): Promise<ChapterData> {
-  return handle<ChapterData>(await fetch(`${API_URL}/api/chapter/${book}/${chapter}`));
+  try {
+    return await handle<ChapterData>(await fetch(`${API_URL}/api/chapter/${book}/${chapter}`));
+  } catch (err) {
+    if (book.toLowerCase() === "genesis" && String(chapter) === "1") {
+      const { default: mock } = await import("../data/genesis1mock");
+      return mock;
+    }
+    throw err;
+  }
 }
 
 // ── Verse highlights (ETU reader; per-user, persisted) ──────────────────────────
@@ -218,6 +228,12 @@ export async function postPathway(pathway: string): Promise<{ success: boolean; 
       body: JSON.stringify({ pathway }),
     }),
   );
+}
+
+// GET the signed-in user's own profile, including `onboarded` (true once a pathway has
+// been chosen) — used to decide whether a freshly signed-in user needs onboarding. Auth.
+export async function fetchMe(): Promise<{ email: string; pathway: string | null; onboarded: boolean }> {
+  return handle(await fetch(`${API_URL}/api/me`, { headers: await authHeaders() }));
 }
 
 // ── Admin portal (all endpoints require an is_admin user; backend re-checks per call) ──
