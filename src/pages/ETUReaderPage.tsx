@@ -376,6 +376,11 @@ export default function ETUReaderPage() {
           {availableLanguages.length > 0 && (
             <select
               value={regionalLang}
+              // A native <select> only fires onChange when its value actually changes —
+              // with one option selected, clicking it again is a no-op event-wise. So
+              // any click on the pill itself also switches the view, independent of
+              // whether the chosen option differs from what was already selected.
+              onClick={() => setLang("regional")}
               onChange={(e) => { setRegionalLang(e.target.value); setLang("regional"); }}
               aria-label="Regional language"
               style={{
