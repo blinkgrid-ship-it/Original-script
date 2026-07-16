@@ -38,6 +38,7 @@ const C = {
 const SERIF = "'Lora', Georgia, 'Times New Roman', serif";
 const HEAD  = "'Playfair Display', Georgia, serif";
 const ML    = "'Noto Serif Malayalam', 'Lora', serif";
+const HEB   = "'Noto Serif Hebrew', 'David Libre', 'Times New Roman', serif";
 
 // 66-book canon with chapter counts. Only Genesis has content wired.
 type Book = { name: string; chapters: number };
@@ -120,6 +121,7 @@ function hlTextStyle(hl?: Highlight): React.CSSProperties {
 interface DisplayVerse {
   number: number;
   english: string;
+  hebrew: string | null;
   // Keyed by ISO language code — whatever's actually been imported, not just Malayalam.
   translations: Record<string, string>;
   fingerprint: string | null; // stable id highlights key off; null → not highlightable
@@ -142,9 +144,11 @@ export default function ETUReaderPage() {
   const [search, setSearch] = useState("");
   const [jumpVerse, setJumpVerse] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [verses, setVerses] = useState<DisplayVerse[] | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
   const { user } = useAuth();
   // This chapter's highlights, keyed by verse fingerprint, for O(1) lookup while rendering.
@@ -195,6 +199,7 @@ export default function ETUReaderPage() {
             ? data.verses.map((v) => ({
                 number: v.verseNumber,
                 english: v.osrText,
+                hebrew: v.hebrewText,
                 translations: v.translations,
                 fingerprint: v.verseFingerprint,
               }))
@@ -224,7 +229,7 @@ export default function ETUReaderPage() {
       .then((list) => {
         if (cancelled) return;
         const map: Record<string, Highlight> = {};
-        for (const h of list) map[h.verseFingerprint] = h;
+        for (const h of list) map[`${h.verseFingerprint}|${h.lang}`] = h;
         setHighlights(map);
       })
       .catch(() => {
@@ -240,49 +245,66 @@ export default function ETUReaderPage() {
     setActiveFp(null);
   }, [book, chapter]);
 
-  // Apply (create/update) a highlight — optimistic, reverts on failure.
-  async function applyHighlight(v: DisplayVerse, color: string, style: "highlight" | "underline") {
+  // Close the regional-language menu on outside click.
+  useEffect(() => {
+    if (!langMenuOpen) return;
+    function onDocClick(e: MouseEvent) {
+      if (langMenuRef.current && !langMenuRef.current.contains(e.target as Node)) setLangMenuOpen(false);
+    }
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [langMenuOpen]);
+
+  // Highlights are keyed by "fingerprint|lang" so English/Hebrew/regional each carry
+  // their own independent color and style for the same verse.
+  function hlKey(fp: string, lang: string) {
+    return `${fp}|${lang}`;
+  }
+
+  // Apply (create/update) a highlight for one language line — optimistic, reverts on failure.
+  async function applyHighlight(v: DisplayVerse, lang: string, color: string, style: "highlight" | "underline") {
     if (!v.fingerprint) return;
     const fp = v.fingerprint;
-    const prev = highlights[fp];
+    const key = hlKey(fp, lang);
+    const prev = highlights[key];
     const optimistic: Highlight = {
-      verseFingerprint: fp, book, chapter, verse: v.number, color, style, updatedAt: "",
+      verseFingerprint: fp, lang, book, chapter, verse: v.number, color, style, updatedAt: "",
     };
-    setHighlights((h) => ({ ...h, [fp]: optimistic }));
+    setHighlights((h) => ({ ...h, [key]: optimistic }));
     try {
-      const saved = await saveHighlight(fp, color, style);
-      setHighlights((h) => ({ ...h, [fp]: saved }));
+      const saved = await saveHighlight(fp, color, style, lang);
+      setHighlights((h) => ({ ...h, [key]: saved }));
     } catch {
       setHighlights((h) => {
         const next = { ...h };
-        if (prev) next[fp] = prev;
-        else delete next[fp];
+        if (prev) next[key] = prev;
+        else delete next[key];
         return next;
       });
     }
   }
 
-  // Remove a highlight — optimistic, reverts on failure.
-  async function removeHighlight(fp: string) {
-    const prev = highlights[fp];
+  // Remove a highlight for one language line — optimistic, reverts on failure.
+  async function removeHighlight(fp: string, lang: string) {
+    const key = hlKey(fp, lang);
+    const prev = highlights[key];
     setHighlights((h) => {
       const next = { ...h };
-      delete next[fp];
+      delete next[key];
       return next;
     });
-    setActiveFp(null);
     try {
-      await deleteHighlight(fp);
+      await deleteHighlight(fp, lang);
     } catch {
-      if (prev) setHighlights((h) => ({ ...h, [fp]: prev }));
+      if (prev) setHighlights((h) => ({ ...h, [key]: prev }));
     }
   }
 
-  // Open the highlight toolbar for a verse (seeding the style toggle from any existing
-  // highlight). No-op when signed out or the verse has no fingerprint.
+  // Open the highlight toolbar for a verse. No-op when signed out or the verse has no
+  // fingerprint. Per-line style/color pickers are seeded individually in the toolbar
+  // itself, since each visible line (EN/HE/regional) can hold a different highlight.
   function openToolbar(v: DisplayVerse) {
     if (!user || !v.fingerprint) return;
-    setPickStyle(highlights[v.fingerprint]?.style ?? "highlight");
     setActiveFp((cur) => (cur === v.fingerprint ? null : v.fingerprint));
   }
 
@@ -296,6 +318,19 @@ export default function ETUReaderPage() {
   }
 
   const activeVerse = activeFp ? verses?.find((v) => v.fingerprint === activeFp) ?? null : null;
+
+  // Which language lines the toolbar should offer a swatch row for — matches whatever
+  // is actually visible under the current pill selection, so you're never offered a
+  // color picker for a line you can't see.
+  const toolbarLines = useMemo(() => {
+    if (!activeVerse) return [];
+    if (lang === "en") return [{ code: "en", label: "English" }];
+    if (lang === "regional") return [{ code: regionalLang, label: languageLabel(regionalLang) }];
+    // "both" — English always, Hebrew only when this verse actually has it.
+    const lines = [{ code: "en", label: "English" }];
+    if (activeVerse.hebrew) lines.push({ code: "he", label: "Hebrew" });
+    return lines;
+  }, [activeVerse, lang, regionalLang]);
 
   // Reset scroll when the chapter changes.
   useEffect(() => {
@@ -363,38 +398,65 @@ export default function ETUReaderPage() {
           className="etu-search"
         />
 
-        {/* Language toggle — the original pill row. The third pill is a <select> in
-            disguise, listing whatever languages availableLanguages actually finds in
-            this chapter's data — a newly imported language just appears here. */}
+        {/* Language toggle — the original pill row. The third pill opens a custom
+            styled menu (not a native <select>) listing whatever languages
+            availableLanguages actually finds in this chapter's data — a newly
+            imported language just appears here. */}
         <div style={{ display: "flex", background: "rgba(246,241,231,0.1)", borderRadius: 20, padding: 3, gap: 2 }} className="etu-lang">
           <button onClick={() => setLang("both")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "both" ? C.gold : "transparent", color: lang === "both" ? C.emeraldD : C.goldSoft }}>
-            EN + {languageLabel(regionalLang)}
+            EN + HE
           </button>
           <button onClick={() => setLang("en")} style={{ border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 12px", fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF, background: lang === "en" ? C.gold : "transparent", color: lang === "en" ? C.emeraldD : C.goldSoft }}>
             EN
           </button>
           {availableLanguages.length > 0 && (
-            <select
-              value={regionalLang}
-              // A native <select> only fires onChange when its value actually changes —
-              // with one option selected, clicking it again is a no-op event-wise. So
-              // any click on the pill itself also switches the view, independent of
-              // whether the chosen option differs from what was already selected.
-              onClick={() => setLang("regional")}
-              onChange={(e) => { setRegionalLang(e.target.value); setLang("regional"); }}
-              aria-label="Regional language"
-              style={{
-                appearance: "none", WebkitAppearance: "none", MozAppearance: "none",
-                border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 20px 5px 12px",
-                fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF,
-                background: lang === "regional" ? C.gold : "transparent",
-                color: lang === "regional" ? C.emeraldD : C.goldSoft,
-              }}
-            >
-              {availableLanguages.map((code) => (
-                <option key={code} value={code} style={{ color: "#000" }}>{languageLabel(code)}</option>
-              ))}
-            </select>
+            <div ref={langMenuRef} style={{ position: "relative" }}>
+              <button
+                onClick={() => { setLang("regional"); setLangMenuOpen((o) => !o); }}
+                aria-label="Regional language"
+                aria-haspopup="listbox"
+                aria-expanded={langMenuOpen}
+                style={{
+                  border: "none", cursor: "pointer", borderRadius: 16, padding: "5px 10px 5px 12px",
+                  fontSize: 11, fontWeight: 600, letterSpacing: "0.04em", fontFamily: SERIF,
+                  background: lang === "regional" ? C.gold : "transparent",
+                  color: lang === "regional" ? C.emeraldD : C.goldSoft,
+                  display: "inline-flex", alignItems: "center", gap: 4,
+                }}
+              >
+                {languageLabel(regionalLang)}
+                <span style={{ fontSize: 9, transform: langMenuOpen ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>▾</span>
+              </button>
+              {langMenuOpen && (
+                <div role="listbox" style={{
+                  position: "absolute", top: "calc(100% + 8px)", right: 0, zIndex: 30,
+                  background: C.paper, border: `1px solid ${C.panelEdge}`, borderRadius: 12,
+                  boxShadow: "0 10px 30px rgba(51,41,27,0.28)", padding: 5, minWidth: 150,
+                  display: "flex", flexDirection: "column", gap: 2,
+                }}>
+                  {availableLanguages.map((code) => {
+                    const selected = code === regionalLang;
+                    return (
+                      <button
+                        key={code}
+                        role="option"
+                        aria-selected={selected}
+                        onClick={() => { setRegionalLang(code); setLang("regional"); setLangMenuOpen(false); }}
+                        style={{
+                          border: "none", cursor: "pointer", textAlign: "left", borderRadius: 8,
+                          padding: "7px 10px", fontSize: 13, fontFamily: SERIF,
+                          background: selected ? C.emerald : "transparent",
+                          color: selected ? "#F6F1E7" : C.ink,
+                          fontWeight: selected ? 600 : 400,
+                        }}
+                      >
+                        {languageLabel(code)}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -501,21 +563,26 @@ export default function ETUReaderPage() {
                     viewport={{ root: mainRef, amount: 0.55 }}
                     transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                     onClick={() => openToolbar(v)}
-                    style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: user && v.fingerprint ? "pointer" : "default" }}>
+                    style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: "default" }}>
                     <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
                     {lang !== "regional" && (
                       <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>
-                        <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
+                        <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
                       </p>
                     )}
-                    {lang !== "en" && (
-                      v.translations[regionalLang]
-                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText, marginTop: lang === "both" ? "1.5rem" : 0 }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.translations[regionalLang]}</span>
+                    {lang === "both" && (
+                      v.hebrew
+                        ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: "clamp(1.3rem, 3.2vw, 1.95rem)", lineHeight: 1.9, color: C.mlText, marginTop: "1.5rem" }}>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
                           </p>
-                        : lang === "regional"
-                          ? <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
-                          : null
+                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint, marginTop: "1.5rem" }}>Hebrew text for this verse is being added by the editorial team.</p>
+                    )}
+                    {lang === "regional" && (
+                      v.translations[regionalLang]
+                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText }}>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, regionalLang)]) : undefined}>{v.translations[regionalLang]}</span>
+                          </p>
+                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
                     )}
                   </motion.div>
                 </section>
@@ -557,22 +624,27 @@ export default function ETUReaderPage() {
                   return (
                     <div key={v.number} id={`v-${v.number}`}
                       onClick={() => openToolbar(v)}
-                      style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s", cursor: user && v.fingerprint ? "pointer" : "default" }}>
+                      style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s", cursor: "default" }}>
                       <span style={{ color: C.emerald, fontSize: 12, fontWeight: 700, minWidth: 22, textAlign: "right", paddingTop: 5, fontFamily: SERIF }}>{v.number}</span>
                       <div style={{ flex: 1 }}>
                         {lang !== "regional" && (
                           <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.english}</span>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
                           </p>
                         )}
-                        {lang !== "en" && (
-                          v.translations[regionalLang]
-                            ? <p style={{ fontFamily: ML, fontSize: 16.5, lineHeight: 2, color: C.mlText, marginTop: lang === "both" ? 6 : 0 }}>
-                                <span style={v.fingerprint ? hlTextStyle(highlights[v.fingerprint]) : undefined}>{v.translations[regionalLang]}</span>
+                        {lang === "both" && (
+                          v.hebrew
+                            ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: 16, lineHeight: 2, color: C.mlText, marginTop: 6 }}>
+                                <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
                               </p>
-                            : lang === "regional"
-                              ? <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
-                              : null
+                            : <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint, marginTop: 6 }}>Hebrew text for this verse is being added by the editorial team.</p>
+                        )}
+                        {lang === "regional" && (
+                          v.translations[regionalLang]
+                            ? <p style={{ fontFamily: ML, fontSize: 16.5, lineHeight: 2, color: C.mlText }}>
+                                <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, regionalLang)]) : undefined}>{v.translations[regionalLang]}</span>
+                              </p>
+                            : <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
                         )}
                       </div>
                     </div>
@@ -626,7 +698,7 @@ export default function ETUReaderPage() {
               <button onClick={() => setActiveFp(null)} style={{ border: "none", background: "none", cursor: "pointer", color: C.inkFaint, fontSize: 18, lineHeight: 1 }} aria-label="Close">×</button>
             </div>
 
-            {/* style toggle */}
+            {/* style toggle — applies to whichever line's swatch you click next */}
             <div style={{ display: "flex", background: C.panel, borderRadius: 12, padding: 3, gap: 2 }}>
               {([["highlight", "🖍 Highlight"], ["underline", "⎁ Underline"]] as const).map(([val, label]) => (
                 <button key={val} onClick={() => setPickStyle(val)}
@@ -636,35 +708,45 @@ export default function ETUReaderPage() {
               ))}
             </div>
 
-            {/* swatches + colour wheel + remove */}
-            <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-              {SWATCHES.map((c) => {
-                const selected = highlights[activeVerse.fingerprint!]?.color?.toLowerCase() === c.toLowerCase();
-                return (
-                  <button key={c} onClick={() => applyHighlight(activeVerse, c, pickStyle)} title={c}
-                    style={{ width: 30, height: 30, borderRadius: "50%", background: c, cursor: "pointer",
-                      border: selected ? `3px solid ${C.emeraldD}` : `2px solid ${C.panelEdge}` }} />
-                );
-              })}
-              {/* colour wheel */}
-              <label title="Custom colour" style={{ width: 30, height: 30, borderRadius: "50%", cursor: "pointer",
-                border: `2px solid ${C.panelEdge}`, display: "inline-flex", alignItems: "center", justifyContent: "center",
-                background: "conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)", position: "relative", overflow: "hidden" }}>
-                <input type="color"
-                  defaultValue={highlights[activeVerse.fingerprint!]?.color ?? "#F5C542"}
-                  onChange={(e) => applyHighlight(activeVerse, e.target.value, pickStyle)}
-                  style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", border: "none", padding: 0 }} />
-              </label>
+            {/* One swatch row per visible line — English and Hebrew (or regional) each
+                carry their own independent color/style. */}
+            {toolbarLines.map((line) => {
+              const key = hlKey(activeVerse.fingerprint!, line.code);
+              const current = highlights[key];
+              return (
+                <div key={line.code} style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                  <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.inkFaint }}>{line.label}</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                    {SWATCHES.map((c) => {
+                      const selected = current?.color?.toLowerCase() === c.toLowerCase();
+                      return (
+                        <button key={c} onClick={() => applyHighlight(activeVerse, line.code, c, pickStyle)} title={c}
+                          style={{ width: 26, height: 26, borderRadius: "50%", background: c, cursor: "pointer",
+                            border: selected ? `3px solid ${C.emeraldD}` : `2px solid ${C.panelEdge}` }} />
+                      );
+                    })}
+                    {/* colour wheel */}
+                    <label title="Custom colour" style={{ width: 26, height: 26, borderRadius: "50%", cursor: "pointer",
+                      border: `2px solid ${C.panelEdge}`, display: "inline-flex", alignItems: "center", justifyContent: "center",
+                      background: "conic-gradient(red, orange, yellow, lime, cyan, blue, magenta, red)", position: "relative", overflow: "hidden" }}>
+                      <input type="color"
+                        defaultValue={current?.color ?? "#F5C542"}
+                        onChange={(e) => applyHighlight(activeVerse, line.code, e.target.value, pickStyle)}
+                        style={{ position: "absolute", inset: 0, opacity: 0, cursor: "pointer", border: "none", padding: 0 }} />
+                    </label>
 
-              <div style={{ flex: 1 }} />
+                    <div style={{ flex: 1 }} />
 
-              {highlights[activeVerse.fingerprint] && (
-                <button onClick={() => removeHighlight(activeVerse.fingerprint!)}
-                  style={{ border: `1px solid ${C.panelEdge}`, background: "transparent", cursor: "pointer", borderRadius: 10, padding: "6px 12px", fontSize: 12, fontWeight: 600, fontFamily: SERIF, color: "#A52B1E" }}>
-                  Remove
-                </button>
-              )}
-            </div>
+                    {current && (
+                      <button onClick={() => removeHighlight(activeVerse.fingerprint!, line.code)}
+                        style={{ border: `1px solid ${C.panelEdge}`, background: "transparent", cursor: "pointer", borderRadius: 10, padding: "5px 10px", fontSize: 11, fontWeight: 600, fontFamily: SERIF, color: "#A52B1E" }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </>
       )}

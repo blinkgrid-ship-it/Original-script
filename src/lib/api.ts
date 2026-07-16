@@ -159,6 +159,9 @@ export async function fetchChapter(book: string, chapter: number | string): Prom
 // ── Verse highlights (ETU reader; per-user, persisted) ──────────────────────────
 export interface Highlight {
   verseFingerprint: string;
+  // Which rendered line this highlight belongs to — "en", "he", or a translation's
+  // ISO code (e.g. "ml"). English/Hebrew/regional can each carry their own color/style.
+  lang: string;
   book: string;
   chapter: number;
   verse: number;
@@ -182,26 +185,29 @@ export async function fetchHighlights(
   return body.highlights;
 }
 
-// Create or update the current user's highlight for a verse. Auth.
+// Create or update the current user's highlight for one language line of a verse
+// (defaults to "en"). Auth.
 export async function saveHighlight(
   verseFingerprint: string,
   color: string,
   style: "highlight" | "underline",
+  lang: string = "en",
 ): Promise<Highlight> {
   const body = await handle<{ success: boolean; highlight: Highlight }>(
     await fetch(`${API_URL}/api/highlights`, {
       method: "POST",
       headers: { "Content-Type": "application/json", ...(await authHeaders()) },
-      body: JSON.stringify({ verseFingerprint, color, style }),
+      body: JSON.stringify({ verseFingerprint, color, style, lang }),
     }),
   );
   return body.highlight;
 }
 
-// Remove the current user's highlight for a verse. Auth. Idempotent.
-export async function deleteHighlight(verseFingerprint: string): Promise<void> {
+// Remove the current user's highlight for one language line of a verse (defaults to
+// "en"). Auth. Idempotent.
+export async function deleteHighlight(verseFingerprint: string, lang: string = "en"): Promise<void> {
   await handle(
-    await fetch(`${API_URL}/api/highlights/${encodeURIComponent(verseFingerprint)}`, {
+    await fetch(`${API_URL}/api/highlights/${encodeURIComponent(verseFingerprint)}?lang=${encodeURIComponent(lang)}`, {
       method: "DELETE",
       headers: await authHeaders(),
     }),
