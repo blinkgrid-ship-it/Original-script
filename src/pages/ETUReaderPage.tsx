@@ -38,7 +38,7 @@ const C = {
 const SERIF = "'Lora', Georgia, 'Times New Roman', serif";
 const HEAD  = "'Playfair Display', Georgia, serif";
 const ML    = "'Noto Serif Malayalam', 'Lora', serif";
-const HEB   = "'Noto Serif Hebrew', 'David Libre', 'Times New Roman', serif";
+const HEB   = "'Frank Ruhl Libre', 'David Libre', 'Noto Serif Hebrew', 'Times New Roman', serif";
 
 // 66-book canon with chapter counts. Only Genesis has content wired.
 type Book = { name: string; chapters: number };
@@ -565,17 +565,17 @@ export default function ETUReaderPage() {
                     onClick={() => openToolbar(v)}
                     style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: "default" }}>
                     <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
-                    {lang !== "regional" && (
-                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>
-                        <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
-                      </p>
-                    )}
                     {lang === "both" && (
                       v.hebrew
-                        ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: "clamp(1.3rem, 3.2vw, 1.95rem)", lineHeight: 1.9, color: C.mlText, marginTop: "1.5rem" }}>
+                        ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: "clamp(1.7rem, 4.2vw, 2.5rem)", lineHeight: 1.95, color: C.ink, fontWeight: 500 }}>
                             <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
                           </p>
-                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint, marginTop: "1.5rem" }}>Hebrew text for this verse is being added by the editorial team.</p>
+                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Hebrew text for this verse is being added by the editorial team.</p>
+                    )}
+                    {lang !== "regional" && (
+                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink, marginTop: lang === "both" ? "1.5rem" : 0 }}>
+                        <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
+                      </p>
                     )}
                     {lang === "regional" && (
                       v.translations[regionalLang]
@@ -627,17 +627,17 @@ export default function ETUReaderPage() {
                       style={{ display: "flex", gap: "0.9rem", padding: "0.85rem 0.9rem", marginBottom: 2, borderRadius: 10, borderBottom: `1px solid ${C.panelEdge}`, background: highlighted ? C.goldSoft : "transparent", transition: "background 0.4s", cursor: "default" }}>
                       <span style={{ color: C.emerald, fontSize: 12, fontWeight: 700, minWidth: 22, textAlign: "right", paddingTop: 5, fontFamily: SERIF }}>{v.number}</span>
                       <div style={{ flex: 1 }}>
-                        {lang !== "regional" && (
-                          <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
-                          </p>
-                        )}
                         {lang === "both" && (
                           v.hebrew
-                            ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: 16, lineHeight: 2, color: C.mlText, marginTop: 6 }}>
+                            ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: 20, lineHeight: 1.9, color: C.ink, fontWeight: 500 }}>
                                 <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
                               </p>
-                            : <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint, marginTop: 6 }}>Hebrew text for this verse is being added by the editorial team.</p>
+                            : <p style={{ fontSize: 13, fontStyle: "italic", color: C.inkFaint }}>Hebrew text for this verse is being added by the editorial team.</p>
+                        )}
+                        {lang !== "regional" && (
+                          <p style={{ fontFamily: SERIF, fontSize: 17, lineHeight: 1.85, color: C.ink, marginTop: lang === "both" ? 6 : 0 }}>
+                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
+                          </p>
                         )}
                         {lang === "regional" && (
                           v.translations[regionalLang]
