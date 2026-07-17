@@ -36,14 +36,14 @@ function DivineText({ text, style }: { text: string; style?: React.CSSProperties
 // ── small presentational helpers ────────────────────────────────────────────────
 const card: React.CSSProperties = { borderRadius: 14, padding: "1.75rem", marginBottom: "1rem" };
 const jarLabel: React.CSSProperties = {
-  fontSize: 9, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", marginBottom: "0.9rem",
+  fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.9rem",
 };
 
 function Paragraphs({ text, color }: { text: string; color: string }) {
   return (
     <>
       {text.split("\n\n").map((p, i) => (
-        <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, lineHeight: 2, color, marginBottom: "1rem" }}>
+        <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 17, lineHeight: 1.85, color, marginBottom: "1rem" }}>
           <DivineText text={p} />
         </p>
       ))}
@@ -160,7 +160,7 @@ export default function VerseReaderPage() {
             <div style={{ ...card, ...pal.creamCard }}>
               <div style={{ ...jarLabel, color: pal.creamLabel }}>Scholar’s Conclusion</div>
               {j.osr_commentary.scholars_conclusion.split("\n\n").map((p: string, i: number) => (
-                <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 15, fontStyle: "italic", lineHeight: 2, color: pal.creamText, marginBottom: "1rem" }}>
+                <p key={i} style={{ fontFamily: "Georgia, serif", fontSize: 17, fontStyle: "italic", lineHeight: 1.85, color: pal.creamText, marginBottom: "1rem" }}>
                   <DivineText text={p} />
                 </p>
               ))}
@@ -172,15 +172,15 @@ export default function VerseReaderPage() {
         {j.theology && (
           <div style={{ ...card, ...pal.cosmicCard }}>
             <div style={{ ...jarLabel, color: pal.cosmicLabel }}>Theology — God-concept vs. Yeshua’s standard</div>
-            <p style={{ fontSize: 14, lineHeight: 1.9, color: pal.cosmicText, marginBottom: "0.75rem" }}>{j.theology.god_concept}</p>
-            <p style={{ fontSize: 13.5, lineHeight: 1.9, color: pal.cosmicTextDim, marginBottom: "1.25rem" }}>{j.theology.film_assessment}</p>
+            <p style={{ fontSize: 15.5, lineHeight: 1.8, color: pal.cosmicText, marginBottom: "0.75rem" }}>{j.theology.god_concept}</p>
+            <p style={{ fontSize: 14.5, lineHeight: 1.8, color: pal.cosmicTextDim, marginBottom: "1.25rem" }}>{j.theology.film_assessment}</p>
             {j.theology.prevailing_verse_ref && (
               <div style={{ background: "#051409", borderRadius: 12, padding: "1.25rem", border: "1px solid rgba(29,158,117,0.35)" }}>
                 <div style={{ ...jarLabel, color: "#1D9E75" }}>The prevailing word — {j.theology.prevailing_verse_ref}</div>
-                <p style={{ fontFamily: "Georgia, serif", fontSize: 14.5, fontStyle: "italic", color: "#b8e0d0", lineHeight: 1.95, marginBottom: "0.5rem" }}>
+                <p style={{ fontFamily: "Georgia, serif", fontSize: 16, fontStyle: "italic", color: "#b8e0d0", lineHeight: 1.85, marginBottom: "0.5rem" }}>
                   <DivineText text={`"${j.theology.prevailing_verse_text}"`} />
                 </p>
-                <p style={{ fontSize: 12.5, color: "#7fb39c", lineHeight: 1.7 }}>{j.theology.prevailing_note}</p>
+                <p style={{ fontSize: 13.5, color: "#7fb39c", lineHeight: 1.7 }}>{j.theology.prevailing_note}</p>
               </div>
             )}
           </div>
@@ -192,11 +192,11 @@ export default function VerseReaderPage() {
             <div style={{ ...jarLabel, color: pal.creamLabel }}>Word Study</div>
             {j.word_study.words.map((w: any, i: number) => (
               <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: i < j.word_study.words.length - 1 ? "1px solid #efe9dc" : "none" }}>
-                <div style={{ minWidth: 64, fontFamily: "Georgia, serif", fontSize: "1.3rem", color: "#534AB7", direction: "rtl", textAlign: "right" }}>{w.hebrew}</div>
+                <div style={{ minWidth: 64, fontFamily: "Georgia, serif", fontSize: "1.5rem", color: "#534AB7", direction: "rtl", textAlign: "right" }}>{w.hebrew}</div>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 10, fontStyle: "italic", color: pal.creamLabel }}>{w.transliteration}</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: pal.creamText, marginBottom: 4 }}>{w.meaning}</div>
-                  <div style={{ fontSize: 12.5, lineHeight: 1.7, color: pal.creamTextDim }}>{w.note}</div>
+                  <div style={{ fontSize: 11.5, fontStyle: "italic", color: pal.creamLabel }}>{w.transliteration}</div>
+                  <div style={{ fontSize: 14.5, fontWeight: 600, color: pal.creamText, marginBottom: 4 }}>{w.meaning}</div>
+                  <div style={{ fontSize: 13.5, lineHeight: 1.7, color: pal.creamTextDim }}>{w.note}</div>
                 </div>
               </div>
             ))}
@@ -238,8 +238,8 @@ export default function VerseReaderPage() {
         {/* No jars yet */}
         {Object.keys(j).length === 0 && (
           <div style={{ ...card, ...pal.cosmicCard, borderStyle: "dashed", textAlign: "center" }}>
-            <p style={{ color: pal.cosmicLabel, fontSize: 13.5 }}>Deep commentary for this verse is coming soon.</p>
-            <p style={{ color: pal.cosmicTextDim, fontSize: 11.5, marginTop: 6 }}>(Sample commentary is currently authored for Genesis 1:1.)</p>
+            <p style={{ color: pal.cosmicLabel, fontSize: 15 }}>Deep commentary for this verse is coming soon.</p>
+            <p style={{ color: pal.cosmicTextDim, fontSize: 13, marginTop: 6 }}>(Sample commentary is currently authored for Genesis 1:1.)</p>
           </div>
         )}
 
@@ -258,8 +258,8 @@ function Detail({ k, v, accent }: { k: string; v?: string; accent?: boolean }) {
   if (!v) return null;
   return (
     <div style={{ marginBottom: "0.85rem" }}>
-      <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: accent ? "#C9A84C" : pal.detailLabel, marginBottom: 3 }}>{k}</div>
-      <div style={{ fontSize: 13.5, lineHeight: 1.8, color: accent ? "#e7d6a8" : pal.detailText }}>{v}</div>
+      <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: accent ? "#C9A84C" : pal.detailLabel, marginBottom: 3 }}>{k}</div>
+      <div style={{ fontSize: 15, lineHeight: 1.75, color: accent ? "#e7d6a8" : pal.detailText }}>{v}</div>
     </div>
   );
 }
