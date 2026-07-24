@@ -77,7 +77,7 @@ export default function TopNav() {
           {/* Brand */}
           <button
             onClick={() => navigate("/home")}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity py-2.5 -my-2.5 min-h-11"
           >
             <span className="text-gold text-base">📜</span>
             <span className="text-parchment font-serif font-semibold text-sm hidden sm:block">
@@ -94,7 +94,7 @@ export default function TopNav() {
             <button
               onClick={toggleTheme}
               title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-              className="w-8 h-8 flex items-center justify-center rounded-full border border-parchment/15 text-parchment/50 hover:text-gold hover:border-gold/30 transition-all"
+              className="w-11 h-11 flex items-center justify-center rounded-full border border-parchment/15 text-parchment/50 hover:text-gold hover:border-gold/30 transition-all"
             >
               {theme === "dark" ? <SunIcon /> : <MoonIcon />}
             </button>
@@ -102,7 +102,7 @@ export default function TopNav() {
             {/* Auth */}
             {user ? (
               <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center text-xs text-gold font-bold">
+                <div className="w-7 h-7 rounded-full bg-gold/20 border border-gold/30 flex items-center justify-center text-xs text-gold font-bold shrink-0">
                   {user.email?.charAt(0).toUpperCase() ?? "?"}
                 </div>
                 <button
@@ -110,7 +110,7 @@ export default function TopNav() {
                     await signOut();
                     navigate("/");
                   }}
-                  className="text-parchment/30 text-xs hover:text-parchment transition-colors hidden sm:block"
+                  className="text-parchment/30 text-xs hover:text-parchment transition-colors py-3.5 px-1"
                 >
                   Sign Out
                 </button>
@@ -118,7 +118,7 @@ export default function TopNav() {
             ) : (
               <button
                 onClick={() => setShowAuth(true)}
-                className="px-3 py-1.5 border border-parchment/20 text-parchment/60 text-xs rounded-lg hover:border-gold/40 hover:text-gold transition-all"
+                className="px-3 py-3.5 border border-parchment/20 text-parchment/60 text-xs rounded-lg hover:border-gold/40 hover:text-gold transition-all"
               >
                 Sign In
               </button>
@@ -134,14 +134,14 @@ export default function TopNav() {
               <button
                 key={tab.path}
                 onClick={() => navigate(tab.path)}
-                className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 border-b-2 transition-all text-xs ${
+                className={`flex-1 flex flex-col items-center py-2.5 gap-0.5 border-b-2 transition-all text-xs min-h-11 ${
                   isActive
                     ? "border-gold text-gold"
                     : "border-transparent text-parchment/40 hover:text-parchment/70"
                 }`}
               >
                 <span className="text-base">{tab.icon}</span>
-                <span className="uppercase tracking-widest text-[10px]">{tab.label}</span>
+                <span className="uppercase tracking-wider text-[11px]">{tab.label}</span>
               </button>
             );
           })}

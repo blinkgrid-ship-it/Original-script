@@ -110,13 +110,13 @@ export default function LandingPage() {
           className="relative max-w-6xl mx-auto text-center w-full"
         >
           {/* Title block */}
-          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-[11px] mb-4 tracking-[0.18em] uppercase">
+          <motion.div variants={heroRise} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gold/25 bg-gold/[0.06] text-gold text-xs mb-4 tracking-[0.18em] uppercase">
             📜 Faith-Deepening · Scriptural Intelligence · Non-Profit
           </motion.div>
 
           <motion.h1
             variants={heroRise}
-            className="font-serif text-parchment leading-[1.04] tracking-[-0.03em] mb-3 text-[2.6rem] sm:text-6xl"
+            className="font-serif text-parchment leading-[1.04] tracking-[-0.03em] mb-3 text-[2.6rem] sm:text-5xl md:text-6xl"
           >
             The{" "}
             <span
@@ -135,7 +135,7 @@ export default function LandingPage() {
           {/* Split hero: question left, living community right */}
           <motion.div
             variants={heroRise}
-            className="grid lg:grid-cols-[1.2fr_0.8fr] gap-5 text-left max-w-5xl mx-auto items-stretch"
+            className="grid md:grid-cols-[1.2fr_0.8fr] gap-5 text-left max-w-5xl mx-auto items-stretch"
           >
             {/* Question of the Day — the hook, elevated off the dark */}
             <div
@@ -146,7 +146,7 @@ export default function LandingPage() {
               }}
             >
               <div className="flex items-center gap-3 mb-5 flex-wrap">
-                <span className="px-3 py-1 rounded-full bg-gold/15 text-gold text-[11px] tracking-wider uppercase">
+                <span className="px-3 py-1 rounded-full bg-gold/15 text-gold text-xs tracking-wider uppercase">
                   ✦ Question of the Day
                 </span>
                 <span className="text-parchment/30 text-xs">
@@ -164,7 +164,7 @@ export default function LandingPage() {
 
               <button
                 onClick={() => setScriptureOpen(!scriptureOpen)}
-                className="flex items-center gap-3 text-left w-full mb-5 group"
+                className="flex items-center gap-3 text-left w-full mb-5 py-2 group"
               >
                 <span className="w-0.5 h-6 bg-gold/40 rounded-full flex-shrink-0" />
                 <span className="text-gold/70 text-sm italic font-serif group-hover:text-gold transition-colors">
@@ -207,18 +207,18 @@ export default function LandingPage() {
 
             {/* Community rail — what people are saying, right now */}
             <div className="rounded-[26px] border border-parchment/10 bg-slate/[0.07] px-6 pt-6 pb-5 flex flex-col">
-              <p className="text-parchment/40 text-[11px] uppercase tracking-[0.18em] mb-5">
+              <p className="text-parchment/40 text-xs uppercase tracking-[0.18em] mb-5">
                 Community Reflections
               </p>
               <div className="space-y-4 flex-1">
                 {previewAnswers.map((ans) => (
                   <div key={ans.id} className="pb-4 border-b border-parchment/[0.07] last:border-0">
                     <div className="flex items-center gap-2.5 mb-2">
-                      <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center text-[11px] text-gold font-bold flex-shrink-0">
+                      <div className="w-7 h-7 rounded-full bg-gold/15 flex items-center justify-center text-xs text-gold font-bold flex-shrink-0">
                         {ans.userName.charAt(0)}
                       </div>
                       <span className="text-parchment/80 text-sm font-medium">{ans.userName}</span>
-                      <span className="ml-auto text-parchment/30 text-[11px]">{ans.timeAgo}</span>
+                      <span className="ml-auto text-parchment/30 text-xs">{ans.timeAgo}</span>
                     </div>
                     <p className="text-parchment/70 text-sm leading-[1.65] line-clamp-3">{ans.answer}</p>
                   </div>
@@ -226,7 +226,7 @@ export default function LandingPage() {
               </div>
               <button
                 onClick={() => requireAuth(() => navigate("/question"))}
-                className="mt-4 text-gold/60 text-xs uppercase tracking-wider text-left hover:text-gold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+                className="mt-4 text-gold/60 text-xs uppercase tracking-wider text-left hover:text-gold transition-colors py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               >
                 {user ? "Read all reflections →" : "Sign in to join the conversation →"}
               </button>
@@ -236,7 +236,7 @@ export default function LandingPage() {
 
         {/* Scroll cue */}
         <div
-          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-parchment/25 text-[11px] tracking-[0.2em] uppercase"
+          className="absolute bottom-2.5 left-1/2 -translate-x-1/2 text-parchment/25 text-xs tracking-[0.2em] uppercase"
           style={{ animation: "os-bob 2.2s ease-in-out infinite" }}
         >
           Scroll ↓
@@ -264,7 +264,7 @@ export default function LandingPage() {
 
           {/* Content */}
           <div>
-            <p className="text-parchment/30 text-[11px] uppercase tracking-[0.2em] mb-3">
+            <p className="text-parchment/30 text-xs uppercase tracking-[0.2em] mb-3">
               — Archaeological Artifact of the Day —
             </p>
             <p className="text-gold/60 text-xs uppercase tracking-widest mb-2">
@@ -418,22 +418,22 @@ export default function LandingPage() {
           </div>
           <div>
             <p className="text-parchment font-serif font-bold mb-4">Quick Links</p>
-            <div className="space-y-2 text-sm flex flex-col items-start">
+            <div className="text-sm flex flex-col items-start">
               <button
                 onClick={() => navigate("/codex")}
-                className="text-parchment/40 hover:text-gold transition-colors"
+                className="text-parchment/40 hover:text-gold transition-colors py-1.5"
               >
                 Enter the Codex
               </button>
               <button
                 onClick={() => navigate("/question")}
-                className="text-parchment/40 hover:text-gold transition-colors"
+                className="text-parchment/40 hover:text-gold transition-colors py-1.5"
               >
                 Today's Question
               </button>
               <button
                 onClick={() => requireAuth(() => navigate("/profile"))}
-                className="text-parchment/40 hover:text-gold transition-colors"
+                className="text-parchment/40 hover:text-gold transition-colors py-1.5"
               >
                 My Journey
               </button>

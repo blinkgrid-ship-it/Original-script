@@ -105,7 +105,8 @@ export default function AdminVerses() {
         {loading ? "Loading…" : data ? `Showing ${data.verses.length ? (page - 1) * PAGE_SIZE + 1 : 0}–${(page - 1) * PAGE_SIZE + (data.verses.length)} of ${data.total} verses · Page ${page} of ${totalPages}` : ""}
       </div>
       <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: 14 }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 720, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead>
             <tr style={{ background: A.panel, textAlign: "left" }}>
               <th style={th}>Book</th><th style={th}>Ch</th><th style={th}>Vs</th>
@@ -125,8 +126,8 @@ export default function AdminVerses() {
                 <td style={{ ...td, fontFamily: "'Noto Serif Malayalam', serif" }}>{v.translations.ml ? clip(v.translations.ml, 80) : <Faint>—</Faint>}</td>
                 <td style={{ ...td }}>{v.hebrewText ? <span dir="rtl">{clip(v.hebrewText, 40)}</span> : <Faint>—</Faint>}</td>
                 <td style={{ ...td, textAlign: "right", whiteSpace: "nowrap" }}>
-                  <button style={{ ...btn("ghost"), padding: "5px 12px", fontSize: 12 }} onClick={() => setEditing(v)}>Edit</button>{" "}
-                  <button style={{ ...btn("danger"), padding: "5px 12px", fontSize: 12 }} onClick={() => setConfirmDelete(v)}>Delete</button>
+                  <button style={{ ...btn("ghost"), padding: "11px 12px", fontSize: 12 }} onClick={() => setEditing(v)}>Edit</button>{" "}
+                  <button style={{ ...btn("danger"), padding: "11px 12px", fontSize: 12 }} onClick={() => setConfirmDelete(v)}>Delete</button>
                 </td>
               </tr>
             ))}
@@ -135,6 +136,7 @@ export default function AdminVerses() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Pager */}

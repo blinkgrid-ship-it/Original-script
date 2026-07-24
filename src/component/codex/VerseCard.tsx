@@ -45,7 +45,7 @@ export default function VerseCard({ verse }: Props) {
           <p className="text-xs text-parchment/40 uppercase tracking-widest mb-3">
             Hebrew
           </p>
-          <p dir="rtl" className="text-parchment font-serif leading-relaxed text-lg mb-4">
+          <p dir="rtl" className="text-parchment font-serif leading-relaxed text-lg mb-4 break-words">
             {verse.hebrew}
           </p>
           <div className="flex flex-wrap gap-1 justify-end">

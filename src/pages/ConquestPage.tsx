@@ -166,7 +166,7 @@ export default function ConquestPage() {
       <div className="min-h-screen bg-ink text-parchment flex items-center justify-center px-6 text-center">
         <div>
           <p className="text-parchment/50 mb-4">No conquest words found for Chapter {chapterNumber}.</p>
-          <button onClick={() => navigate("/codex")} className="text-gold text-sm hover:underline">
+          <button onClick={() => navigate("/codex")} className="text-gold text-sm hover:underline inline-block py-2.5">
             ← Back to Codex
           </button>
         </div>
@@ -220,7 +220,7 @@ export default function ConquestPage() {
       <div className="border-b border-parchment/10 px-5 py-4 flex items-center justify-between">
         <button
           onClick={() => navigate("/codex")}
-          className="text-parchment/40 hover:text-parchment text-sm transition-colors"
+          className="text-parchment/40 hover:text-parchment text-sm transition-colors py-2.5 -my-2.5"
         >
           ← Codex
         </button>
@@ -266,7 +266,7 @@ export default function ConquestPage() {
           </p>
 
           {/* Word progress dots */}
-          <div className="flex items-center justify-center gap-2 mt-6">
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
             {words.map((_, i) => (
               <div
                 key={i}

@@ -36,7 +36,7 @@ function DivineText({ text, style }: { text: string; style?: React.CSSProperties
 // ── small presentational helpers ────────────────────────────────────────────────
 const card: React.CSSProperties = { borderRadius: 14, padding: "1.75rem", marginBottom: "1rem" };
 const jarLabel: React.CSSProperties = {
-  fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.9rem",
+  fontSize: 12, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", marginBottom: "0.9rem",
 };
 
 function Paragraphs({ text, color }: { text: string; color: string }) {
@@ -127,15 +127,15 @@ export default function VerseReaderPage() {
       {/* Hero — night sky (dark) / soft daylight (light) */}
       <div style={{ background: pal.heroGradient, padding: "2.5rem 1.25rem 3rem" }}>
         <div style={{ maxWidth: 680, margin: "0 auto" }}>
-          <button onClick={() => navigate("/codex")} style={{ color: pal.backLink, background: "none", border: "none", cursor: "pointer", fontSize: 12, marginBottom: "1.5rem" }}>← Codex</button>
+          <button onClick={() => navigate("/codex")} style={{ color: pal.backLink, background: "none", border: "none", cursor: "pointer", fontSize: 12, padding: "10px 0", marginBottom: "0.75rem", marginLeft: -2 }}>← Codex</button>
 
-          <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C9A84C", marginBottom: "1rem" }}>
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.2em", textTransform: "uppercase", color: "#C9A84C", marginBottom: "1rem" }}>
             {data.book} · Chapter {data.chapter} · Verse {vNum}
           </div>
 
           {/* NDH source tag */}
           {src && (
-            <div style={{ display: "inline-block", fontSize: 10, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: "1.5rem", background: `${src.colour}26`, color: src.colour, border: `1px solid ${src.colour}80` }}>
+            <div style={{ display: "inline-block", fontSize: 11, fontWeight: 600, letterSpacing: "0.1em", textTransform: "uppercase", padding: "5px 14px", borderRadius: 20, marginBottom: "1.5rem", background: `${src.colour}26`, color: src.colour, border: `1px solid ${src.colour}80` }}>
               {data.ndh.code} · {src.name} · {src.era}
               {data.ndh.confidence && data.ndh.confidence !== "consensus" ? ` · ${data.ndh.confidence}` : ""}
             </div>
@@ -191,10 +191,10 @@ export default function VerseReaderPage() {
           <div style={{ ...card, ...pal.creamCard }}>
             <div style={{ ...jarLabel, color: pal.creamLabel }}>Word Study</div>
             {j.word_study.words.map((w: any, i: number) => (
-              <div key={i} style={{ display: "flex", gap: "1rem", padding: "0.75rem 0", borderBottom: i < j.word_study.words.length - 1 ? "1px solid #efe9dc" : "none" }}>
-                <div style={{ minWidth: 64, fontFamily: "Georgia, serif", fontSize: "1.5rem", color: "#534AB7", direction: "rtl", textAlign: "right" }}>{w.hebrew}</div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 11.5, fontStyle: "italic", color: pal.creamLabel }}>{w.transliteration}</div>
+              <div key={i} style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem 1rem", padding: "0.75rem 0", borderBottom: i < j.word_study.words.length - 1 ? "1px solid #efe9dc" : "none" }}>
+                <div style={{ flexShrink: 0, fontFamily: "Georgia, serif", fontSize: "1.5rem", color: "#534AB7", direction: "rtl", textAlign: "right", overflowWrap: "anywhere" }}>{w.hebrew}</div>
+                <div style={{ flex: 1, minWidth: 180 }}>
+                  <div style={{ fontSize: 12, fontStyle: "italic", color: pal.creamLabel }}>{w.transliteration}</div>
                   <div style={{ fontSize: 14.5, fontWeight: 600, color: pal.creamText, marginBottom: 4 }}>{w.meaning}</div>
                   <div style={{ fontSize: 13.5, lineHeight: 1.7, color: pal.creamTextDim }}>{w.note}</div>
                 </div>
@@ -258,7 +258,7 @@ function Detail({ k, v, accent }: { k: string; v?: string; accent?: boolean }) {
   if (!v) return null;
   return (
     <div style={{ marginBottom: "0.85rem" }}>
-      <div style={{ fontSize: 11.5, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: accent ? "#C9A84C" : pal.detailLabel, marginBottom: 3 }}>{k}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: "0.07em", textTransform: "uppercase", color: accent ? "#C9A84C" : pal.detailLabel, marginBottom: 3 }}>{k}</div>
       <div style={{ fontSize: 15, lineHeight: 1.75, color: accent ? "#e7d6a8" : pal.detailText }}>{v}</div>
     </div>
   );
@@ -268,6 +268,6 @@ function navBtn(disabled: boolean, pal: ReturnType<typeof useDeepReadPalette>): 
   return {
     fontSize: 12, color: disabled ? pal.navDim : pal.backLink, background: "none",
     border: `1px solid ${disabled ? pal.navDimBorder : "rgba(153,133,196,0.4)"}`, borderRadius: 20,
-    padding: "6px 14px", cursor: disabled ? "default" : "pointer",
+    padding: "12px 16px", cursor: disabled ? "default" : "pointer",
   };
 }

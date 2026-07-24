@@ -55,7 +55,8 @@ export default function AdminDashboard() {
         <>
           <h2 style={{ fontFamily: HEAD, fontSize: "1.25rem", fontWeight: 600, marginBottom: "0.8rem" }}>Coverage by book</h2>
           <div style={{ ...card, padding: 0, overflow: "hidden" }}>
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14 }}>
+            <div style={{ overflowX: "auto" }}>
+            <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 14 }}>
               <thead>
                 <tr style={{ background: A.panel, textAlign: "left" }}>
                   <th style={th}>Book</th>
@@ -75,6 +76,7 @@ export default function AdminDashboard() {
                 ))}
               </tbody>
             </table>
+            </div>
           </div>
         </>
       )}

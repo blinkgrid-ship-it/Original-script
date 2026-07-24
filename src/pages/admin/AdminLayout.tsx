@@ -21,6 +21,7 @@ export default function AdminLayout() {
   const navigate = useNavigate();
   const [state, setState] = useState<"checking" | "ok">("checking");
   const [email, setEmail] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,8 +49,36 @@ export default function AdminLayout() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", background: A.paper, fontFamily: SERIF, color: A.ink }}>
+      {/* ── Mobile top bar (hidden on desktop via .admin-mobilebar) ── */}
+      <div
+        className="admin-mobilebar"
+        style={{ display: "none", position: "sticky", top: 0, zIndex: 25, alignItems: "center", gap: "0.7rem", padding: "0.8rem 1rem", background: A.emeraldD, color: A.cream }}
+      >
+        <button
+          onClick={() => setSidebarOpen((s) => !s)}
+          aria-label="Toggle menu"
+          style={{ width: 44, height: 44, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(246,241,231,0.12)", border: "1px solid rgba(246,241,231,0.2)", borderRadius: 9, color: A.cream, fontSize: 18, cursor: "pointer" }}
+        >
+          ☰
+        </button>
+        <div style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 600 }}>ETU Admin</div>
+      </div>
+
+      {/* ── Sidebar backdrop (mobile only, when open) ── */}
+      {sidebarOpen && (
+        <div
+          className="admin-backdrop"
+          onClick={() => setSidebarOpen(false)}
+          style={{ display: "none", position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 29 }}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <aside style={{ width: 250, flexShrink: 0, background: A.emeraldD, color: A.cream, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}>
+      <aside
+        className="admin-sidebar"
+        data-open={sidebarOpen ? "" : undefined}
+        style={{ width: 250, flexShrink: 0, background: A.emeraldD, color: A.cream, display: "flex", flexDirection: "column", position: "sticky", top: 0, height: "100vh" }}
+      >
         <div style={{ padding: "1.4rem 1.25rem 1.1rem", display: "flex", alignItems: "center", gap: "0.7rem", borderBottom: "1px solid rgba(246,241,231,0.12)" }}>
           <div style={{ width: 34, height: 34, borderRadius: 9, background: A.gold, color: A.emeraldD, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17 }}>✦</div>
           <div style={{ lineHeight: 1.15 }}>
@@ -64,11 +93,12 @@ export default function AdminLayout() {
               key={item.to}
               to={item.to}
               end={item.end}
+              onClick={() => setSidebarOpen(false)}
               style={({ isActive }) => ({
                 display: "flex",
                 alignItems: "center",
                 gap: 11,
-                padding: "10px 13px",
+                padding: "13px 13px",
                 borderRadius: 9,
                 fontSize: 14,
                 textDecoration: "none",
@@ -95,6 +125,26 @@ export default function AdminLayout() {
       <main style={{ flex: 1, minWidth: 0, padding: "2.2rem clamp(1.5rem, 4vw, 3.2rem) 4rem" }}>
         <Outlet />
       </main>
+
+      {/* Responsive: collapse the always-on sidebar into a hamburger-triggered
+          drawer below 860px, since a fixed 250px sidebar leaves almost no room
+          for content on phone widths. */}
+      <style>{`
+        @media (max-width: 860px) {
+          .admin-mobilebar { display: flex !important; }
+          .admin-backdrop { display: block !important; }
+          .admin-sidebar {
+            display: none !important;
+            position: fixed !important;
+            inset: 0 auto 0 0;
+            width: min(280px, 82vw) !important;
+            height: 100vh !important;
+            z-index: 30;
+            box-shadow: 0 0 40px rgba(0,0,0,0.35);
+          }
+          .admin-sidebar[data-open] { display: flex !important; }
+        }
+      `}</style>
     </div>
   );
 }
@@ -109,5 +159,5 @@ const sideLink: React.CSSProperties = {
   fontSize: 13,
   fontFamily: SERIF,
   cursor: "pointer",
-  padding: "5px 0",
+  padding: "10px 0",
 };

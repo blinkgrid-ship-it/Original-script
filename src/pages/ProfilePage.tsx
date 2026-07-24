@@ -374,7 +374,7 @@ export default function ProfilePage() {
             {/* Pathway badge */}
             <button
               onClick={() => setChangingPathway((v) => !v)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-4 hover:bg-gold/20 transition-colors"
+              className="inline-flex items-center gap-2 px-3 py-2.5 rounded-full border border-gold/30 bg-gold/10 text-gold text-xs mb-4 hover:bg-gold/20 transition-colors"
             >
               ✦ {PATHWAY_LABELS[pathway] ?? pathway}
               <span className="text-gold/50">{changingPathway ? "✕" : "change"}</span>
@@ -387,7 +387,7 @@ export default function ProfilePage() {
                     key={p.id}
                     disabled={savingPathway}
                     onClick={() => handlePathwayChange(p.id)}
-                    className={`w-full border rounded-xl px-4 py-2.5 text-left transition-all flex items-center gap-3 disabled:opacity-50 ${
+                    className={`w-full border rounded-xl px-4 py-3 text-left transition-all flex items-center gap-3 disabled:opacity-50 ${
                       pathway === p.id
                         ? "border-gold bg-gold/5"
                         : "border-parchment/10 hover:border-gold/40"
@@ -443,7 +443,7 @@ export default function ProfilePage() {
               </div>
               <div className="text-center z-10">
                 <p className="text-sm font-serif font-bold text-gold leading-none">{wordsMastered}</p>
-                <p className="text-parchment/30 text-[9px]">/{TOTAL_WORDS}</p>
+                <p className="text-parchment/30 text-[11px]">/{TOTAL_WORDS}</p>
               </div>
             </div>
             <p className="text-parchment/30 text-xs uppercase tracking-widest">Hebrew Words</p>
@@ -529,7 +529,7 @@ export default function ProfilePage() {
           <p className="text-parchment/30 text-xs uppercase tracking-widest mb-5">
             30-Day Answer Journal
           </p>
-          <div className="grid grid-cols-10 gap-1.5">
+          <div className="grid grid-cols-6 sm:grid-cols-10 gap-1.5">
             {calendarDays.map((d) => (
               <button
                 key={d.key}

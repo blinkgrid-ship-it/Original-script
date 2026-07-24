@@ -27,7 +27,8 @@ export default function AdminRoles() {
       {/* Current users */}
       <div style={{ ...card, padding: 0, overflow: "hidden", marginBottom: "1.4rem" }}>
         <div style={{ padding: "13px 16px", fontFamily: HEAD, fontSize: 15, fontWeight: 600, borderBottom: `1px solid ${A.panelEdge}` }}>Current users</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead>
             <tr style={{ background: A.panel, textAlign: "left" }}>
               <th style={th}>Email</th><th style={th}>Role</th><th style={th}>Status</th><th style={{ ...th, textAlign: "right" }}>Actions</th>
@@ -38,10 +39,11 @@ export default function AdminRoles() {
               <td style={td}>shalomsam1717@gmail.com</td>
               <td style={td}><Badge color={A.emerald}>Superadmin</Badge></td>
               <td style={td}><Badge color={A.gold}>Active</Badge></td>
-              <td style={{ ...td, textAlign: "right" }}><button style={{ ...btn("ghost"), padding: "5px 12px", fontSize: 12, opacity: 0.45, cursor: "not-allowed" }} disabled>Remove</button></td>
+              <td style={{ ...td, textAlign: "right" }}><button style={{ ...btn("ghost"), padding: "11px 12px", fontSize: 12, opacity: 0.45, cursor: "not-allowed" }} disabled>Remove</button></td>
             </tr>
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Invite (disabled) */}
@@ -63,7 +65,8 @@ export default function AdminRoles() {
       {/* Permission matrix */}
       <div style={{ ...card, padding: 0, overflow: "hidden" }}>
         <div style={{ padding: "13px 16px", fontFamily: HEAD, fontSize: 15, fontWeight: 600, borderBottom: `1px solid ${A.panelEdge}` }}>Role permissions</div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13.5 }}>
+        <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", minWidth: 480, borderCollapse: "collapse", fontSize: 13.5 }}>
           <thead>
             <tr style={{ background: A.panel, textAlign: "left" }}>
               <th style={th}>Feature</th>
@@ -81,6 +84,7 @@ export default function AdminRoles() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );

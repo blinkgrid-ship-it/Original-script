@@ -272,7 +272,7 @@ export default function CodexPage() {
               <button
                 key={ch.number}
                 onClick={() => handleChapterClick(i)}
-                className={`flex-1 min-w-[100px] py-3 px-3 text-center border-b-2 transition-all ${
+                className={`flex-1 min-w-[64px] py-3 px-3 text-center border-b-2 transition-all ${
                   currentChapter === i && !chapterComplete
                     ? "border-gold text-gold"
                     : "border-transparent text-parchment/40"
@@ -296,7 +296,7 @@ export default function CodexPage() {
             <button
               key={lang}
               onClick={() => setLanguage(lang)}
-              className={`px-3 py-1.5 rounded-full text-xs transition-all ${
+              className={`px-3 py-2.5 rounded-full text-xs transition-all ${
                 language === lang
                   ? "bg-gold/20 text-gold"
                   : "text-parchment/40 border border-parchment/10 hover:border-parchment/30"
@@ -398,7 +398,7 @@ export default function CodexPage() {
                       )}
                       {language === "hebrew" && (
                         <p
-                          className="text-parchment text-xl leading-loose font-hebrew"
+                          className="text-parchment text-xl leading-loose font-hebrew break-words"
                           dir="rtl"
                         >
                           {verse.hebrew}
@@ -451,7 +451,7 @@ export default function CodexPage() {
                                     </span>
                                     <button
                                       onClick={() => setActiveWord(null)}
-                                      className="text-parchment/30 hover:text-parchment text-lg"
+                                      className="text-parchment/30 hover:text-parchment text-lg w-11 h-11 -m-2.5 flex items-center justify-center shrink-0"
                                     >
                                       ×
                                     </button>

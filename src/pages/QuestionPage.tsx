@@ -164,7 +164,7 @@ export default function QuestionPage() {
           {/* Scripture accordion */}
           <button
             onClick={() => setScriptureOpen(!scriptureOpen)}
-            className="flex items-center gap-3 text-left w-full mb-6"
+            className="flex items-center gap-3 text-left w-full mb-6 py-2"
           >
             <span className="w-0.5 h-5 bg-gold/40 rounded-full" />
             <span className="text-gold/70 text-sm italic font-serif">{question.scripture.reference}</span>
@@ -233,7 +233,7 @@ export default function QuestionPage() {
           {/* See community link */}
           <button
             onClick={() => setScreen("feed")}
-            className="w-full text-center text-parchment/30 text-sm hover:text-parchment transition-colors py-2"
+            className="w-full text-center text-parchment/30 text-sm hover:text-parchment transition-colors py-3"
           >
             See community reflections ({communityCount}) →
           </button>
@@ -354,7 +354,7 @@ export default function QuestionPage() {
                   ) : (
                     <button
                       onClick={() => requireAuth(() => setReplyingTo(ans.id))}
-                      className="text-xs text-parchment/30 hover:text-gold transition-colors"
+                      className="text-xs text-parchment/30 hover:text-gold transition-colors py-2.5 px-1 -mx-1"
                     >
                       {user ? "Reply →" : "🔒 Sign in to reply →"}
                     </button>

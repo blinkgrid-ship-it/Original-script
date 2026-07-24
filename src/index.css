@@ -38,6 +38,12 @@ html, body {
   background-color: rgb(var(--color-ink));
   color: rgb(var(--color-parchment));
   transition: background-color 0.4s ease-in-out, color 0.4s ease-in-out;
+  /* iOS Safari flashes a default blue rectangle over any tapped element unless
+     told otherwise — most visible on custom icon buttons with a dark background
+     (e.g. the ETU reader's header icons). We already give buttons their own
+     hover/active styling, so the browser default just looks like a rendering
+     glitch on top of it. */
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* Smooth theme transition for every element */

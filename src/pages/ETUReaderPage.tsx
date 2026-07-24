@@ -9,6 +9,7 @@ import {
   type Highlight,
 } from "../lib/api";
 import { useAuth } from "../context/AuthContext";
+import AuthModal from "../component/AuthModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Eastern Theology University · ISR Bible Reader
@@ -116,6 +117,32 @@ function hlTextStyle(hl?: Highlight): React.CSSProperties {
   };
 }
 
+// ── Header icons ────────────────────────────────────────────────────────────────
+// Line-art SVGs (currentColor, consistent 1.75 stroke) rather than emoji — emoji
+// render differently per-OS and read as unpolished on a study-Bible surface. All
+// sized to sit optically centered in the 44×44 iconBtn hit target.
+const svgBase = {
+  fill: "none", stroke: "currentColor", strokeWidth: 1.75,
+  strokeLinecap: "round" as const, strokeLinejoin: "round" as const,
+};
+function MenuIcon() {
+  return (<svg viewBox="0 0 24 24" width="19" height="19" {...svgBase}><line x1="3.5" y1="6.5" x2="20.5" y2="6.5" /><line x1="3.5" y1="12" x2="20.5" y2="12" /><line x1="3.5" y1="17.5" x2="20.5" y2="17.5" /></svg>);
+}
+function SearchIcon() {
+  return (<svg viewBox="0 0 24 24" width="18" height="18" {...svgBase}><circle cx="10.5" cy="10.5" r="6.5" /><line x1="20" y1="20" x2="15.6" y2="15.6" /></svg>);
+}
+function HighlightIcon() {
+  return (<svg viewBox="0 0 24 24" width="18" height="18" {...svgBase}><path d="M15 4.5l4.5 4.5" /><path d="M17.2 6.7L8 15.9l-3.3.9.9-3.3 9.2-9.2a1.6 1.6 0 0 1 2.3 0l.1.1a1.6 1.6 0 0 1 0 2.3z" /><line x1="4.5" y1="20.5" x2="13" y2="20.5" /></svg>);
+}
+function BackIcon() {
+  return (<svg viewBox="0 0 24 24" width="19" height="19" {...svgBase}><path d="M9.5 7L4.5 12l5 5" /><path d="M4.5 12h10.5a4.5 4.5 0 0 1 0 9h-2" /></svg>);
+}
+// Logo mark — a simple open book, fitting an academic Bible reader far better than
+// the bare ✦ glyph that was there before.
+function BookIcon() {
+  return (<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6.5C10.5 5.3 8.5 4.8 4.5 4.8V17c4 0 6 .5 7.5 1.7" /><path d="M12 6.5C13.5 5.3 15.5 4.8 19.5 4.8V17c-4 0-6 .5-7.5 1.7" /><line x1="12" y1="6.5" x2="12" y2="18.7" /></svg>);
+}
+
 // Rendering-shape verse — mapped from the API's ChapterVerse so the JSX below barely
 // had to change when this page moved off the static file.
 interface DisplayVerse {
@@ -145,10 +172,17 @@ export default function ETUReaderPage() {
   const [jumpVerse, setJumpVerse] = useState<number | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  // Below 480px there's no room for an always-visible search box alongside the
+  // language pills — it collapses into an icon that opens this as a full-width bar.
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  // ETU has its own chrome with no global TopNav, so a signed-out reader had no way
+  // to log in from here — this drives an in-page AuthModal so highlighting is reachable.
+  const [showAuth, setShowAuth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [verses, setVerses] = useState<DisplayVerse[] | null>(null);
   const mainRef = useRef<HTMLDivElement>(null);
   const langMenuRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const { user } = useAuth();
   // This chapter's highlights, keyed by verse fingerprint, for O(1) lookup while rendering.
@@ -245,6 +279,13 @@ export default function ETUReaderPage() {
     setActiveFp(null);
   }, [book, chapter]);
 
+  // Focus the search input the moment the mobile overlay opens (it's the same
+  // input as desktop, just repositioned via CSS — not a fresh mount, so autoFocus
+  // wouldn't fire).
+  useEffect(() => {
+    if (mobileSearchOpen) searchInputRef.current?.focus();
+  }, [mobileSearchOpen]);
+
   // Close the regional-language menu on outside click.
   useEffect(() => {
     if (!langMenuOpen) return;
@@ -300,11 +341,12 @@ export default function ETUReaderPage() {
     }
   }
 
-  // Open the highlight toolbar for a verse. No-op when signed out or the verse has no
-  // fingerprint. Per-line style/color pickers are seeded individually in the toolbar
-  // itself, since each visible line (EN/HE/regional) can hold a different highlight.
+  // Open the highlight toolbar for a verse. When signed out, prompt sign-in instead
+  // of silently doing nothing — otherwise tapping a verse feels broken. No-op only
+  // when the verse has no fingerprint (nothing to key a highlight off).
   function openToolbar(v: DisplayVerse) {
-    if (!user || !v.fingerprint) return;
+    if (!v.fingerprint) return;
+    if (!user) { setShowAuth(true); return; }
     setActiveFp((cur) => (cur === v.fingerprint ? null : v.fingerprint));
   }
 
@@ -376,26 +418,43 @@ export default function ETUReaderPage() {
   return (
     <div style={{ minHeight: "100vh", background: C.paper, color: C.ink, display: "flex", flexDirection: "column", fontFamily: SERIF }}>
       {/* ── Top bar ── */}
-      <header style={{ background: C.emeraldD, color: "#F6F1E7", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", position: "sticky", top: 0, zIndex: 20 }}>
-        <button onClick={() => setSidebarOpen((s) => !s)} style={{ ...iconBtn, display: "inline-flex" }} className="etu-menu" aria-label="Toggle books">☰</button>
-        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", minWidth: 0 }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: C.gold, color: C.emeraldD, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>✦</div>
-          <div style={{ lineHeight: 1.15, minWidth: 0 }}>
+      <header style={{ background: C.emeraldD, color: "#F6F1E7", padding: "0.85rem 1.25rem", display: "flex", alignItems: "center", gap: "1rem", position: "sticky", top: 0, zIndex: 20 }} className="etu-header">
+        <button onClick={() => setSidebarOpen((s) => !s)} style={{ ...iconBtn, display: "inline-flex" }} className="etu-menu" aria-label="Toggle books"><MenuIcon /></button>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.7rem", minWidth: 0 }} className="etu-brand">
+          <div className="etu-brand-icon" style={{ width: 34, height: 34, borderRadius: 9, background: C.gold, color: C.emeraldD, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><BookIcon /></div>
+          <div style={{ lineHeight: 1.15, minWidth: 0 }} className="etu-brand-text">
             <div style={{ fontFamily: HEAD, fontSize: 16, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>Eastern Theology University</div>
-            <div style={{ fontSize: 10, letterSpacing: "0.14em", color: C.goldSoft, textTransform: "uppercase" }}>ISR Bible · Free Academic Access</div>
+            <div style={{ fontSize: 10, letterSpacing: "0.14em", color: C.goldSoft, textTransform: "uppercase" }} className="etu-brand-sub">ISR Bible · Free Academic Access</div>
           </div>
         </div>
 
-        <div style={{ flex: 1 }} />
+        <div style={{ flex: 1 }} className="etu-header-spacer" />
 
-        {/* Search */}
+        {/* Search — below 480px there's no room for it inline alongside the language
+            pills, so it collapses to an icon button (.etu-search-icon) that opens
+            this same input as a full-width overlay bar (.etu-search[data-open]),
+            rather than removing the feature outright. */}
+        <button
+          onClick={() => setMobileSearchOpen(true)}
+          aria-label="Search scripture"
+          className="etu-search-icon"
+          style={{ ...iconBtn, display: "none" }}
+        >
+          <SearchIcon />
+        </button>
         <input
+          ref={searchInputRef}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && runSearch()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") { runSearch(); setMobileSearchOpen(false); }
+            if (e.key === "Escape") setMobileSearchOpen(false);
+          }}
+          onBlur={() => setMobileSearchOpen(false)}
           placeholder="Search scripture…  (e.g. 3:5)"
           style={{ background: "rgba(246,241,231,0.12)", border: "1px solid rgba(246,241,231,0.25)", borderRadius: 20, padding: "7px 16px", color: "#F6F1E7", fontSize: 13, width: 210, fontFamily: SERIF }}
           className="etu-search"
+          data-open={mobileSearchOpen ? "" : undefined}
         />
 
         {/* Language toggle — the original pill row. The third pill opens a custom
@@ -467,10 +526,12 @@ export default function ETUReaderPage() {
           ))}
         </div>
 
-        {user && (
-          <button onClick={openPanel} style={iconBtn} title="My highlights" aria-label="My highlights">🖍️</button>
+        {user ? (
+          <button onClick={openPanel} style={iconBtn} title="My highlights" aria-label="My highlights"><HighlightIcon /></button>
+        ) : (
+          <button onClick={() => setShowAuth(true)} style={iconBtn} title="Sign in to highlight" aria-label="Sign in to highlight"><HighlightIcon /></button>
         )}
-        <button onClick={() => navigate("/home")} style={iconBtn} title="Back to Original Script">↩</button>
+        <button onClick={() => navigate("/home")} style={iconBtn} title="Back to Original Script" aria-label="Back to Original Script"><BackIcon /></button>
       </header>
 
       <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
@@ -518,7 +579,7 @@ export default function ETUReaderPage() {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5 }}>
               {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((n) => (
                 <button key={n} onClick={() => goToChapter(n)}
-                  style={{ cursor: "pointer", borderRadius: 6, padding: "6px 0", fontSize: 12, fontFamily: SERIF, border: `1px solid ${chapter === n ? C.emerald : C.panelEdge}`, background: chapter === n ? C.emerald : C.paper, color: chapter === n ? "#F6F1E7" : C.inkSoft }}>
+                  style={{ cursor: "pointer", borderRadius: 6, padding: "6px 0", minHeight: 40, fontSize: 12, fontFamily: SERIF, border: `1px solid ${chapter === n ? C.emerald : C.panelEdge}`, background: chapter === n ? C.emerald : C.paper, color: chapter === n ? "#F6F1E7" : C.inkSoft }}>
                   {n}
                 </button>
               ))}
@@ -530,9 +591,27 @@ export default function ETUReaderPage() {
         {readMode === "immersive" && verses ? (
           <main
             ref={mainRef}
+            className="etu-immersive"
             style={{
               flex: 1, overflowY: "auto", height: "calc(100vh - 58px)",
-              scrollSnapType: "y mandatory", scrollBehavior: "smooth",
+              // Crisp one-verse-per-screen snapping. A verse fits within a normal
+              // portrait/tablet screen, so mandatory never traps here — it only would
+              // on short viewports (landscape phones), and the `max-height: 500px` rule
+              // below turns snapping off entirely there so long verses stay readable.
+              //
+              // NOTE: no `scrollBehavior: "smooth"` here on purpose. Pairing CSS
+              // scroll-snap-type:mandatory with CSS scroll-behavior:smooth on the same
+              // scrolling element is a known WebKit/iOS Safari conflict — the browser's
+              // smooth-scroll animation and the native snap physics fight each other,
+              // producing exactly "stuck between two verses" plus visual jitter during
+              // finger-scroll. It's been in this file since the very first version of
+              // immersive mode. Jump-to-verse (below) already passes its own
+              // `behavior: "smooth"` argument to that scrollIntoView call, which works
+              // independently of this container-level CSS property — only the
+              // chapter-change reset-to-top loses its animation, which is fine (an
+              // instant jump when switching chapters reads better than an animated one
+              // anyway).
+              scrollSnapType: "y mandatory",
               background: `radial-gradient(circle at 50% 30%, ${C.panel}, ${C.paper} 70%)`,
             }}
           >
@@ -548,41 +627,63 @@ export default function ETUReaderPage() {
             {verses.map((v) => {
               const highlighted = jumpVerse === v.number;
               return (
-                <section key={v.number} id={`v-${v.number}`}
-                  style={{ scrollSnapAlign: "start", minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", textAlign: "center", padding: "clamp(2rem, 8vh, 6rem) clamp(1.5rem, 8vw, 6rem)", position: "relative" }}>
-                  {/* Big faint verse number watermark */}
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ root: mainRef, amount: 0.5 }}
-                    transition={{ duration: 0.6, ease: "easeOut" }}
-                    style={{ position: "absolute", top: "clamp(1rem, 6vh, 4rem)", fontFamily: HEAD, fontSize: "clamp(5rem, 18vw, 11rem)", fontWeight: 700, color: highlighted ? "rgba(176,137,72,0.28)" : "rgba(29,107,95,0.09)", lineHeight: 1, transition: "color 0.5s", pointerEvents: "none", userSelect: "none" }}>{v.number}</motion.span>
+                <section key={v.number} id={`v-${v.number}`} className="etu-verse"
+                  style={{ scrollSnapAlign: "start", minHeight: "calc(100vh - 58px)", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "clamp(1.5rem, 5vh, 3rem) clamp(1.5rem, 8vw, 6rem) clamp(2rem, 8vh, 6rem)", position: "relative" }}>
+                  {/* Verse-number watermark gets its own reserved-height region at the
+                      top of the section — real layout space, not an absolutely
+                      positioned float sharing the reference label's spot. Previously
+                      the watermark used a fixed pixel/vh offset while the text below
+                      it (including the label) was vertically *centered* in the whole
+                      section; on a short viewport (e.g. real iPhone SE, 375×667) the
+                      centered text shifted up enough to collide with the watermark.
+                      Stacking watermark → label → content as separate, non-overlapping
+                      rows makes that collision structurally impossible at any height. */}
+                  <div className="etu-vnum" style={{ width: "100%", minHeight: "clamp(5rem, 15vh, 9rem)", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    {/* Centered via the wrapper's flexbox, not a CSS transform — framer-motion
+                        drives `transform` itself for the scale animation below, and a manual
+                        translate(-50%,-50%) in the style prop gets silently clobbered by it,
+                        which was throwing the digit off-center. */}
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ root: mainRef, amount: 0.5, once: true }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      style={{ fontFamily: HEAD, fontSize: "clamp(5rem, 18vw, 11rem)", fontWeight: 700, color: highlighted ? "rgba(176,137,72,0.28)" : "rgba(29,107,95,0.09)", lineHeight: 1, transition: "color 0.5s", pointerEvents: "none", userSelect: "none" }}>{v.number}</motion.span>
+                  </div>
+                  <span style={{ color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.25rem", flexShrink: 0 }}>{book.toUpperCase()} {chapter}:{v.number}</span>
+                  {/* Hebrew/English content — takes the remaining space below the
+                      watermark region and the label row, and centers within it. */}
                   <motion.div
                     initial={{ opacity: 0, y: 28 }}
                     whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ root: mainRef, amount: 0.55 }}
+                    viewport={{ root: mainRef, amount: 0.55, once: true }}
                     transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
                     onClick={() => openToolbar(v)}
-                    style={{ maxWidth: 720, position: "relative", zIndex: 1, cursor: "default" }}>
-                    <span style={{ display: "block", color: C.emerald, fontSize: 13, fontWeight: 700, letterSpacing: "0.1em", marginBottom: "1.5rem" }}>{book.toUpperCase()} {chapter}:{v.number}</span>
+                    style={{ flex: 1, display: "grid", alignContent: "center", rowGap: "1.5rem", maxWidth: 720, width: "100%", position: "relative", zIndex: 1, cursor: "default" }}>
                     {lang === "both" && (
-                      v.hebrew
-                        ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: "clamp(1.7rem, 4.2vw, 2.5rem)", lineHeight: 1.95, color: C.ink, fontWeight: 500 }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
-                          </p>
-                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Hebrew text for this verse is being added by the editorial team.</p>
+                      <div style={{ minHeight: "clamp(5rem, 13vh, 8rem)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {v.hebrew
+                          ? <p dir="rtl" style={{ fontFamily: HEB, fontSize: "clamp(1.7rem, 4.2vw, 2.5rem)", lineHeight: 1.95, color: C.ink, fontWeight: 500 }}>
+                              <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "he")]) : undefined}>{v.hebrew}</span>
+                            </p>
+                          : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>Hebrew text for this verse is being added by the editorial team.</p>}
+                      </div>
                     )}
                     {lang !== "regional" && (
-                      <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink, marginTop: lang === "both" ? "1.5rem" : 0 }}>
-                        <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
-                      </p>
+                      <div style={{ minHeight: "clamp(4rem, 10vh, 6rem)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <p style={{ fontFamily: SERIF, fontSize: "clamp(1.4rem, 3.4vw, 2.1rem)", lineHeight: 1.6, color: C.ink }}>
+                          <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, "en")]) : undefined}>{v.english}</span>
+                        </p>
+                      </div>
                     )}
                     {lang === "regional" && (
-                      v.translations[regionalLang]
-                        ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText }}>
-                            <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, regionalLang)]) : undefined}>{v.translations[regionalLang]}</span>
-                          </p>
-                        : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>
+                      <div style={{ minHeight: "clamp(4rem, 10vh, 6rem)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        {v.translations[regionalLang]
+                          ? <p style={{ fontFamily: ML, fontSize: "clamp(1.25rem, 3vw, 1.85rem)", lineHeight: 1.8, color: C.mlText }}>
+                              <span style={v.fingerprint ? hlTextStyle(highlights[hlKey(v.fingerprint, regionalLang)]) : undefined}>{v.translations[regionalLang]}</span>
+                            </p>
+                          : <p style={{ fontSize: 15, fontStyle: "italic", color: C.inkFaint }}>{languageLabel(regionalLang)} for this verse is being added by the editorial team.</p>}
+                      </div>
                     )}
                   </motion.div>
                 </section>
@@ -795,7 +896,16 @@ export default function ETUReaderPage() {
         </>
       )}
 
-      {/* Responsive: hide sidebar toggle on desktop, hide static sidebar on mobile */}
+      {/* Sign-in popup — reused from the main app so a signed-out ETU reader can log
+          in without leaving the page. On success the auth context updates, which
+          flips the pencil icon in and unlocks tap-to-highlight. */}
+      {showAuth && (
+        <AuthModal onClose={() => setShowAuth(false)} onSuccess={() => setShowAuth(false)} />
+      )}
+
+      {/* Responsive: hide sidebar toggle on desktop, hide static sidebar on mobile.
+          Breakpoints: 860px (tablet/small-laptop) tightens the header; 480px (phone)
+          strips it down further so it never overflows on a 320-375px viewport. */}
       <style>{`
         .etu-menu { display: none !important; }
         @keyframes etu-bob { 0%,100% { transform: translateY(0); opacity: 0.7; } 50% { transform: translateY(6px); opacity: 1; } }
@@ -803,10 +913,69 @@ export default function ETUReaderPage() {
           .etu-menu { display: inline-flex !important; }
           .etu-sidebar { display: none !important; }
           .etu-sidebar[data-open] { display: flex !important; }
-          .etu-search { width: 120px !important; }
+          .etu-search { width: 110px !important; }
           .etu-mode { display: none !important; }
-          .etu-lang select { max-width: 88px !important; padding-right: 20px !important; }
+          /* At iPad-Mini-ish widths (~768px) the title otherwise truncates to
+             "Eastern Theology U…" — let it shrink one notch instead. */
+          .etu-brand-text > div:first-child { font-size: 14px !important; }
         }
+        @media (max-width: 640px) {
+          .etu-header { padding: 0.7rem 0.85rem !important; gap: 0.6rem !important; }
+          .etu-brand-sub { display: none; }
+          .etu-search { width: 110px !important; font-size: 12px !important; padding: 6px 12px !important; }
+          /* Reading rhythm on phones: number + reference sit near the top, with a
+             modest bottom counterweight that nudges the flex-1 body toward center.
+             Kept small (not a full top-band match) so a medium verse still fits inside
+             the shortest portrait phone (iPhone SE, ~609px usable) — otherwise the
+             extra padding pushes the section past one screen and mandatory snap traps
+             the last line. Fitting cleanly matters more than perfect centering. */
+          .etu-verse { padding-top: 1.25rem !important; padding-bottom: 2rem !important; }
+          .etu-vnum { min-height: 4.5rem !important; align-items: flex-start !important; }
+        }
+        /* Short viewports (landscape phones, ~375–430px tall) can't fit a whole verse
+           — number + Hebrew + English — inside one 100vh screen. With mandatory
+           scroll-snap that means the body text lives below the fold and any scroll
+           toward it snaps straight to the next verse, so it's unreadable. Here we drop
+           the one-verse-per-screen model entirely: no snap, verses shrink to their
+           natural height and flow as a normal scrollable column. Keyed on max-HEIGHT,
+           so tablets (≥768px tall even in landscape) are unaffected. */
+        @media (max-height: 500px) {
+          .etu-immersive { scroll-snap-type: none !important; }
+          .etu-immersive > section { min-height: 0 !important; padding-top: 1.5rem !important; padding-bottom: 1.5rem !important; }
+          .etu-vnum { min-height: 0 !important; }
+        }
+        @media (max-width: 480px) {
+          .etu-header { gap: 0.4rem !important; padding-left: 0.6rem !important; padding-right: 0.6rem !important; }
+          /* Hide only the wordmark text — the gold ✦ logo stays. Layout is the
+             standard app-bar shape: hamburger + logo pinned left, the flex-1 spacer
+             pushes search / language / highlight / back to the right edge. */
+          .etu-brand-text { display: none; }
+          /* Search collapses to an icon; tapping it opens the same input as a
+             fixed full-width bar below the header instead of removing the feature. */
+          .etu-search-icon { display: inline-flex !important; }
+          .etu-search { width: 0 !important; padding: 0 !important; border: none !important; opacity: 0; pointer-events: none; }
+          .etu-search[data-open] {
+            position: fixed !important; top: 60px; left: 10px; right: 10px; width: auto !important;
+            opacity: 1; pointer-events: auto; padding: 10px 16px !important; font-size: 14px !important;
+            border: 1px solid rgba(246,241,231,0.3) !important; box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+            z-index: 45;
+          }
+          .etu-lang { gap: 1px !important; padding: 2px !important; }
+          .etu-lang button { padding: 3px 5px !important; font-size: 9px !important; letter-spacing: 0 !important; }
+        }
+        /* Below ~360px (only the Galaxy Z Fold folded, ~344px) the logo + hamburger +
+           search + language pills + highlight + back genuinely can't all fit on one
+           row. The logo is the one purely-decorative element, so it's the one to drop
+           here — every real phone (375–430px) keeps it. */
+        @media (max-width: 360px) {
+          .etu-brand-icon { display: none !important; }
+          .etu-header { gap: 0.2rem !important; padding-left: 0.3rem !important; padding-right: 0.3rem !important; }
+          .etu-lang button { padding: 3px 4px !important; }
+        }
+        /* Header pill buttons must never wrap their label onto multiple lines —
+           without this, "EN + HE" stacks into 3 lines on very narrow screens
+           (e.g. Galaxy Z Fold folded, ~344px), throwing off the row's height. */
+        .etu-lang button, .etu-mode button { white-space: nowrap; }
       `}</style>
     </div>
   );
@@ -814,7 +983,7 @@ export default function ETUReaderPage() {
 
 const iconBtn: React.CSSProperties = {
   background: "rgba(246,241,231,0.12)", border: "1px solid rgba(246,241,231,0.2)", color: "#F6F1E7",
-  borderRadius: 9, width: 34, height: 34, cursor: "pointer", fontSize: 15, alignItems: "center", justifyContent: "center", display: "inline-flex", flexShrink: 0,
+  borderRadius: 9, width: 44, height: 44, cursor: "pointer", fontSize: 15, alignItems: "center", justifyContent: "center", display: "inline-flex", flexShrink: 0,
 };
 
 function navBtn(disabled: boolean): React.CSSProperties {

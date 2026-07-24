@@ -80,7 +80,7 @@ export function btn(variant: "primary" | "ghost" | "danger" = "primary"): React.
   const base: React.CSSProperties = {
     cursor: "pointer",
     borderRadius: 10,
-    padding: "9px 18px",
+    padding: "13px 18px",
     fontSize: 13,
     fontWeight: 600,
     fontFamily: SERIF,

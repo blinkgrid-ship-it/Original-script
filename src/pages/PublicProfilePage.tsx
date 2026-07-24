@@ -169,7 +169,7 @@ export default function PublicProfilePage() {
       <div className="sticky top-0 z-10 bg-ink/95 backdrop-blur-sm border-b border-parchment/10 px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-parchment/50 hover:text-parchment transition-colors text-sm"
+          className="flex items-center gap-2 text-parchment/50 hover:text-parchment transition-colors text-sm py-2.5 -my-2.5"
         >
           ← Back
         </button>
@@ -237,7 +237,7 @@ export default function PublicProfilePage() {
               </div>
               <div className="text-center z-10">
                 <p className="text-sm font-serif font-bold text-gold leading-none">{wordsMastered}</p>
-                <p className="text-parchment/30 text-[9px]">/{TOTAL_WORDS}</p>
+                <p className="text-parchment/30 text-[11px]">/{TOTAL_WORDS}</p>
               </div>
             </div>
             <p className="text-parchment/30 text-xs uppercase tracking-widest">Hebrew Words</p>

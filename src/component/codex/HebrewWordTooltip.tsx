@@ -12,7 +12,7 @@ export default function HebrewWordTooltip({ word }: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-block mx-1 px-1 rounded text-gold hover:bg-gold/20 transition-all cursor-pointer font-serif text-xl"
+        className="inline-flex items-center justify-center min-w-11 min-h-11 mx-1 px-1 rounded text-gold hover:bg-gold/20 transition-all cursor-pointer font-serif text-xl"
         dir="rtl"
       >
         {word.word}
@@ -24,10 +24,10 @@ export default function HebrewWordTooltip({ word }: Props) {
             className="absolute inset-0 bg-black/60"
             onClick={() => setOpen(false)}
           />
-          <div className="relative z-10 w-full max-w-md bg-ink border border-gold/30 rounded-t-2xl sm:rounded-2xl p-6 pb-8">
+          <div className="relative z-10 w-full max-w-md max-h-[85vh] overflow-y-auto bg-ink border border-gold/30 rounded-t-2xl sm:rounded-2xl p-6 pb-8">
             <button
               onClick={() => setOpen(false)}
-              className="absolute top-4 right-4 text-parchment/40 hover:text-parchment text-xl"
+              className="absolute top-2 right-2 w-11 h-11 flex items-center justify-center text-parchment/40 hover:text-parchment text-xl"
             >
               ✕
             </button>

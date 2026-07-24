@@ -55,7 +55,7 @@ export default function ProfileCard({
     return (
       <button
         onClick={handleClick}
-        className="inline-flex items-center gap-2 group"
+        className="inline-flex items-center gap-2 group py-1.5 -my-1.5 min-h-11"
         title={`View ${name}'s profile`}
       >
         {/* Avatar */}
